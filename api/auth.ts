@@ -1,4 +1,5 @@
 
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from './_lib/mongodb';
 import bcrypt from 'bcryptjs';
@@ -37,12 +38,15 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
           } else {
                return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
           }
+      } else if (user.role === 'superadmin') {
+          clubName = 'System Administration';
       }
+
       const payload = {
         userId: user._id.toHexString(),
         username: user.username,
         role: user.role,
-        clubId: user.clubId,
+        clubId: user.clubId ? user.clubId.toHexString() : null,
         clubName: clubName,
       };
       const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });

@@ -66,8 +66,8 @@ const ClubStartingListPage: React.FC = () => {
     const eventOptions = useMemo(() => events.map(e => ({ value: e.id, label: `${e.name} (${new Date(e.date).toLocaleDateString()})` })), [events]);
     const clubOptions = useMemo(() => {
         const allClubs = [...new Set(swimmers.map(s => s.club))].sort();
-        const options: SelectOption[] = allClubs.map(c => ({ value: c, label: c }));
-        if (currentUser?.role === 'admin') {
+        const options: SelectOption[] = allClubs.map((c: string) => ({ value: c, label: c }));
+        if (currentUser?.role === 'admin' || currentUser?.role === 'superadmin') {
             options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs (Admin)' });
         }
         return options;

@@ -81,7 +81,7 @@ const EventProgramPage: React.FC = () => {
     fetchPageData(); 
   }, [fetchPageData]);
 
-  const initialUniqueRaces = useMemo(() => { 
+  const initialUniqueRaces = useMemo<RaceDefinition[]>(() => { 
     if (!results.length || !swimmers.length || !event) return [];
     
     const raceMap = new Map<string, RaceDefinition>();

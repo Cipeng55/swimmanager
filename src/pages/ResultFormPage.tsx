@@ -210,11 +210,11 @@ const ResultFormPage: React.FC = () => {
         errors.seedTime = 'Seed Time must be in MM:SS.ss format (e.g., 01:23.45).';
       }
     } else { // Adding mode
-      const hasSelectedNewEntries = Object.values(raceEntries).some(entry => entry.selectedForSubmission && !entry.isAlreadyRegistered);
+      const hasSelectedNewEntries = Object.values(raceEntries).some((entry: RaceEntryState) => entry.selectedForSubmission && !entry.isAlreadyRegistered);
       if (!hasSelectedNewEntries) {
         errors.raceEntries = 'Select at least one new race to enter a seed time for.';
       } else {
-        Object.entries(raceEntries).forEach(([raceId, entry]) => {
+        Object.entries(raceEntries).forEach(([raceId, entry]: [string, RaceEntryState]) => {
           if (entry.selectedForSubmission && !entry.isAlreadyRegistered && entry.inputValue && !validateTimeFormat(entry.inputValue)) {
              if (!errors.raceEntries) errors.raceEntries = '';
              errors.raceEntries += `Invalid seed time format for ${predefinedRaceTypes.find(rt=>rt.id === raceId)?.label}. `;
@@ -356,7 +356,7 @@ const ResultFormPage: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       setError((isEditing ? 'Failed to update result: ' : 'Failed to add results: ') + (err.message || 'Unknown error'));
-      setSubmissionStatus({ successes: 0, failures: (isEditing ? 1 : Object.values(raceEntries).filter(e=>e.selectedForSubmission && !e.isAlreadyRegistered).length || 1), messages: [err.message || 'Unknown error'] });
+      setSubmissionStatus({ successes: 0, failures: (isEditing ? 1 : Object.values(raceEntries).filter((e: RaceEntryState)=>e.selectedForSubmission && !e.isAlreadyRegistered).length || 1), messages: [err.message || 'Unknown error'] });
     } finally {
       setLoading(false);
     }
