@@ -14,7 +14,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        const query = authData.role === 'superadmin' ? {} : { clubId: authData.clubId };
+        const query: { clubId?: string } = {};
+        if (authData.role !== 'superadmin' && authData.clubId) {
+            query.clubId = authData.clubId;
+        }
         const events = await collection.find(query).sort({ date: -1 }).toArray();
         const transformedEvents = events.map(event => {
           const { _id, ...rest } = event;
@@ -26,6 +29,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'POST': {
         if (authData.role !== 'admin') {
             return res.status(403).json({ message: 'Forbidden: Only admins can create events.' });
+        }
+        if (!authData.clubId) {
+            return res.status(400).json({ message: 'Admin account is not associated with a club.' });
         }
         const newEventData = { ...req.body, clubId: authData.clubId };
         const result = await collection.insertOne(newEventData);

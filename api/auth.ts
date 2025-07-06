@@ -39,12 +39,12 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
         }
 
         let clubId: string | null = null;
-        let clubName: string = 'System Administrator'; // Default for system-level admin
+        let clubName: string | null = null;
 
-        // A 'user' must have a club. An 'admin' does not.
-        if (user.role === 'user') {
+        // Both 'user' and 'admin' roles must have a club affiliation.
+        if (user.role === 'user' || user.role === 'admin') {
             if (!user.clubId) {
-                return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
+                return res.status(500).json({ message: `Data integrity error: ${user.role} is missing a club affiliation.` });
             }
             
             const club = await clubsCollection.findOne({ _id: new ObjectId(user.clubId) });
@@ -54,13 +54,12 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
             clubId = user.clubId.toHexString();
             clubName = club.name;
         }
-        // If user.role is 'admin', we use the defaults: clubId = null, clubName = 'System Administrator'
 
         const payload = {
             userId: user._id.toHexString(),
             username: user.username,
             role: user.role,
-            clubId: clubId, // This will be null for 'admin'
+            clubId: clubId,
             clubName: clubName,
         };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });

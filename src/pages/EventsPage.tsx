@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
@@ -66,13 +65,15 @@ const EventsPage: React.FC = () => {
     return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
   }
 
+  const canManageEvents = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Swim Events</h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Manage all upcoming and past swimming competitions.
+            Manage all upcoming and past swimming competitions for your club.
           </p>
         </div>
         {currentUser?.role === 'admin' && (
@@ -117,24 +118,24 @@ const EventsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(event.date).toLocaleDateString('id-ID')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{event.location}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-1 sm:space-x-2 flex items-center">
-                      {currentUser?.role === 'admin' && (
+                      <button
+                        onClick={() => navigate(`/events/${event.id}/program`)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label={`View program for ${event.name}`}
+                        title="Open Program & Heat Sheets"
+                      >
+                        <ListOrderedIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => navigate(`/events/${event.id}/results-book`)}
+                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        aria-label={`View results book for ${event.name}`}
+                        title="Open Results Book"
+                      >
+                        <TrophyIcon className="h-5 w-5" />
+                      </button>
+                      {canManageEvents && (
                         <>
-                          <button
-                            onClick={() => navigate(`/events/${event.id}/program`)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            aria-label={`View program for ${event.name}`}
-                            title="Open Program & Heat Sheets (Admin)"
-                          >
-                            <ListOrderedIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/events/${event.id}/results-book`)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                            aria-label={`View results book for ${event.name}`}
-                            title="Open Results Book (Admin)"
-                          >
-                            <TrophyIcon className="h-5 w-5" />
-                          </button>
                           <button
                             onClick={() => navigate(`/events/edit/${event.id}`)}
                             className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
@@ -153,10 +154,6 @@ const EventsPage: React.FC = () => {
                           </button>
                         </>
                       )}
-                      {/* If user role has no specific actions here, this area will be empty for them */}
-                       {currentUser?.role !== 'admin' && (
-                        <span className="text-xs text-gray-400 italic">View details via Club Starting List</span>
-                      )}
                     </td>
                   </tr>
                 ))}
@@ -166,10 +163,10 @@ const EventsPage: React.FC = () => {
         )}
       </section>
 
-      {currentUser?.role === 'admin' && (
+      {canManageEvents && (
         <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirm Deletion">
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            Are you sure you want to delete the event "{eventToDelete?.name}"? This action cannot be undone.
+            Are you sure you want to delete the event "{eventToDelete?.name}"? This action cannot be undone. All associated results and program orders will also be deleted.
           </p>
           <div className="flex justify-end space-x-3">
             <button

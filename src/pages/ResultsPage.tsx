@@ -101,7 +101,8 @@ const ResultsPage: React.FC = () => {
 
   const canManageResult = (result: SwimResult): boolean => {
     if (!currentUser) return false;
-    if (currentUser.role === 'admin') return true;
+    if (currentUser.role === 'superadmin') return true;
+    if (currentUser.role === 'admin' && result.clubId === currentUser.clubId) return true;
     if (currentUser.role === 'user' && result.createdByUserId === currentUser.id) return true;
     return false;
   };
@@ -115,7 +116,7 @@ const ResultsPage: React.FC = () => {
             Browse all recorded swim times.
           </p>
         </div>
-        {(currentUser?.role === 'admin' || currentUser?.role === 'user') && (
+        {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
           <Link
             to="/results/add"
             className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center self-start sm:self-auto"
@@ -174,9 +175,7 @@ const ResultsPage: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Distance</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Final Time</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                  {(currentUser?.role === 'admin' || results.some(r => r.createdByUserId === currentUser?.id)) && (
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                  )}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -188,30 +187,30 @@ const ResultsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.distance}m</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.time || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{new Date(result.dateRecorded).toLocaleDateString()}</td>
-                    {(currentUser?.role === 'admin' || result.createdByUserId === currentUser?.id) && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-                        {canManageResult(result) && (
-                          <>
-                            <button
-                              onClick={() => navigate(`/results/edit/${result.id}`)}
-                              className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                              aria-label={`Edit result for ${getSwimmerName(result.swimmerId)}`}
-                              title="Edit Result"
-                            >
-                              <EditIcon className="h-5 w-5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(result)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                              aria-label={`Delete result for ${getSwimmerName(result.swimmerId)}`}
-                              title="Delete Result"
-                            >
-                              <DeleteIcon className="h-5 w-5" />
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
+                      {canManageResult(result) ? (
+                        <>
+                          <button
+                            onClick={() => navigate(`/results/edit/${result.id}`)}
+                            className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            aria-label={`Edit result for ${getSwimmerName(result.swimmerId)}`}
+                            title="Edit Result"
+                          >
+                            <EditIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(result)}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                            aria-label={`Delete result for ${getSwimmerName(result.swimmerId)}`}
+                            title="Delete Result"
+                          >
+                            <DeleteIcon className="h-5 w-5" />
+                          </button>
+                        </>
+                      ) : (
+                         <span className="text-xs text-gray-400 italic">No permission</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

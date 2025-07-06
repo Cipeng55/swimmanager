@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
@@ -139,12 +138,21 @@ const SwimmersPage: React.FC = () => {
     if (currentSuccessCount > 0) fetchSwimmersData();
   };
 
+  const canManageSwimmers = currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
   if (loading && !isImportModalOpen) {
     return <LoadingSpinner text="Loading swimmers..." />;
   }
   if (error && swimmers.length === 0 && !isImportModalOpen) {
     return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
   }
+  
+  const canManageSwimmerRecord = (swimmer: Swimmer): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'superadmin') return true;
+    if ((currentUser.role === 'user' || currentUser.role === 'admin') && swimmer.clubId === currentUser.clubId) return true;
+    return false;
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -154,7 +162,7 @@ const SwimmersPage: React.FC = () => {
           <p className="text-lg text-gray-600 dark:text-gray-300">View and manage swimmer profiles.</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 self-start sm:self-auto">
-            {currentUser?.role === 'admin' && ( // Only admin can import for now
+            {canManageSwimmers && (
               <button
                   onClick={() => setIsImportModalOpen(true)}
                   className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center"
@@ -164,7 +172,7 @@ const SwimmersPage: React.FC = () => {
                   Import Swimmers
               </button>
             )}
-            {(currentUser?.role === 'admin' || currentUser?.role === 'user') && ( // User can add swimmer
+            {canManageSwimmers && (
                 <Link
                     to="/swimmers/add"
                     className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center"
@@ -184,7 +192,7 @@ const SwimmersPage: React.FC = () => {
         {swimmers.length === 0 && !loading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             <p className="mb-2 text-xl">No swimmers found.</p>
-            {(currentUser?.role === 'admin' || currentUser?.role === 'user') && <p>Click "Add New Swimmer" {currentUser?.role === 'admin' && 'or "Import Swimmers"'} to register.</p>}
+            {canManageSwimmers && <p>Click "Add New Swimmer" or "Import Swimmers" to register.</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -196,9 +204,7 @@ const SwimmersPage: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gender</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Club</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade Level</th>
-                  {currentUser?.role === 'admin' && (
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                  )}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -209,26 +215,30 @@ const SwimmersPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gender}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.club}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gradeLevel || '-'}</td>
-                    {currentUser?.role === 'admin' && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-                        <button
-                          onClick={() => navigate(`/swimmers/edit/${swimmer.id}`)}
-                          className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
-                          aria-label={`Edit ${swimmer.name}`}
-                          title="Edit Swimmer"
-                        >
-                          <EditIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(swimmer)}
-                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                          aria-label={`Delete ${swimmer.name}`}
-                          title="Delete Swimmer"
-                        >
-                          <DeleteIcon className="h-5 w-5" />
-                        </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
+                      {canManageSwimmerRecord(swimmer) ? (
+                        <>
+                          <button
+                            onClick={() => navigate(`/swimmers/edit/${swimmer.id}`)}
+                            className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"
+                            aria-label={`Edit ${swimmer.name}`}
+                            title="Edit Swimmer"
+                          >
+                            <EditIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(swimmer)}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                            aria-label={`Delete ${swimmer.name}`}
+                            title="Delete Swimmer"
+                          >
+                            <DeleteIcon className="h-5 w-5" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className='text-xs text-gray-400 italic'>No permission</span>
+                      )}
                       </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
@@ -237,7 +247,7 @@ const SwimmersPage: React.FC = () => {
         )}
       </section>
 
-      {currentUser?.role === 'admin' && (
+      {canManageSwimmers && (
         <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirm Deletion">
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Are you sure you want to delete the swimmer "{swimmerToDelete?.name}"? This action cannot be undone. All associated results may also be affected or orphaned.
@@ -249,7 +259,7 @@ const SwimmersPage: React.FC = () => {
         </Modal>
       )}
 
-      {currentUser?.role === 'admin' && (
+      {canManageSwimmers && (
         <ImportSwimmersModal
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}

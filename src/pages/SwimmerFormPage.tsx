@@ -49,19 +49,24 @@ const SwimmerFormPage: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewSwimmer, string>>>({});
 
-  // Role-based access control for edit mode
-  if (isEditing && currentUser?.role !== 'admin') {
-    return <Navigate to="/swimmers" replace state={{ unauthorizedAccess: true }} />;
-  }
-
   useEffect(() => {
-    if (isEditing && swimmerId && currentUser?.role === 'admin') { 
+    if (isEditing && swimmerId) { 
       setLoading(true);
       getSwimmerById(swimmerId)
         .then(swimmer => {
           if (swimmer) {
+            const canEdit = currentUser?.role === 'superadmin' || 
+                            ((currentUser?.role === 'user' || currentUser?.role === 'admin') && swimmer.clubId === currentUser.clubId);
+
+            if (!canEdit) {
+              setError('You are not authorized to edit this swimmer.');
+              setIsUnauthorized(true);
+              return;
+            }
+
             const dobString = typeof swimmer.dob === 'string' ? swimmer.dob : '';
             const formattedSwimmer = { 
                 ...swimmer, 
@@ -106,8 +111,8 @@ const SwimmerFormPage: React.FC = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    if (isEditing && currentUser?.role !== 'admin') {
-        setError("Unauthorized to edit swimmer.");
+    if (isUnauthorized) {
+        setError("Unauthorized to submit form.");
         return;
     }
 
@@ -123,16 +128,12 @@ const SwimmerFormPage: React.FC = () => {
       };
 
       if (isEditing && 'id' in swimmerData && swimmerData.id) {
-        // When updating, explicitly pass gradeLevel, even if undefined, to allow clearing it.
-        await updateSwimmer(swimmerData.id, { 
-            ...payload, 
-            gradeLevel: swimmerData.gradeLevel ? swimmerData.gradeLevel.trim() : undefined 
-        });
+        await updateSwimmer(swimmerData.id, payload);
       } else {
         await addSwimmer(payload);
       }
       navigate('/swimmers');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setError(isEditing ? 'Failed to update swimmer.' : 'Failed to add swimmer.');
     } finally {
@@ -140,7 +141,7 @@ const SwimmerFormPage: React.FC = () => {
     }
   };
   
-  if (loading && isEditing && !swimmerData.name && currentUser?.role === 'admin') {
+  if (loading && isEditing && !swimmerData.name) {
     return <LoadingSpinner text="Loading swimmer details..." />;
   }
 
@@ -148,9 +149,9 @@ const SwimmerFormPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-          {isEditing ? 'Edit Swimmer Profile (Admin)' : 'Register New Swimmer'}
+          {isEditing ? 'Edit Swimmer Profile' : 'Register New Swimmer'}
         </h1>
-        {isEditing && currentUser?.role !== 'admin' && <p className="text-red-500">You are not authorized to edit swimmers.</p>}
+        {isEditing && isUnauthorized && <p className="text-red-500">You do not have permission to edit this record.</p>}
       </header>
 
       {error && <div className="mb-4 p-3 text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700 rounded-md">{error}</div>}
@@ -165,7 +166,7 @@ const SwimmerFormPage: React.FC = () => {
           onChange={handleChange}
           error={formErrors.name}
           required
-          disabled={loading}
+          disabled={loading || isUnauthorized}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
@@ -177,7 +178,7 @@ const SwimmerFormPage: React.FC = () => {
             onChange={handleChange}
             error={formErrors.dob}
             required
-            disabled={loading}
+            disabled={loading || isUnauthorized}
             />
             <FormField
             label="Gender"
@@ -189,7 +190,7 @@ const SwimmerFormPage: React.FC = () => {
             onChange={handleChange}
             error={formErrors.gender}
             required
-            disabled={loading}
+            disabled={loading || isUnauthorized}
             />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -202,7 +203,7 @@ const SwimmerFormPage: React.FC = () => {
             onChange={handleChange}
             error={formErrors.club}
             required
-            disabled={loading}
+            disabled={loading || isUnauthorized}
             />
             <FormField
             label="Grade Level (School)"
@@ -213,7 +214,7 @@ const SwimmerFormPage: React.FC = () => {
             value={swimmerData.gradeLevel || ''}
             onChange={handleChange}
             error={formErrors.gradeLevel} 
-            disabled={loading}
+            disabled={loading || isUnauthorized}
             />
         </div>
         <div className="flex items-center justify-end space-x-3 pt-4 border-t dark:border-gray-700">
@@ -225,7 +226,7 @@ const SwimmerFormPage: React.FC = () => {
           </Link>
           <button
             type="submit"
-            disabled={loading || (isEditing && currentUser?.role !== 'admin')}
+            disabled={loading || isUnauthorized}
             className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-gray-800 disabled:opacity-50 flex items-center"
           >
             {loading && <ButtonSpinnerIcon className="h-4 w-4 mr-2" />}

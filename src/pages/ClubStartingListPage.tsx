@@ -54,6 +54,9 @@ const ClubStartingListPage: React.FC = () => {
                 if (eventsData.length > 0) {
                     setSelectedEventId(eventsData[0].id.toString());
                 }
+                if (currentUser?.role !== 'superadmin' && currentUser?.clubName) {
+                    setSelectedClub(currentUser.clubName);
+                }
             } catch (err: any) {
                 setError(err.message || 'Failed to load initial data.');
             } finally {
@@ -61,16 +64,26 @@ const ClubStartingListPage: React.FC = () => {
             }
         };
         loadInitialData();
-    }, []);
+    }, [currentUser]);
 
     const eventOptions = useMemo(() => events.map(e => ({ value: e.id, label: `${e.name} (${new Date(e.date).toLocaleDateString()})` })), [events]);
+    
     const clubOptions = useMemo(() => {
+        if (!currentUser) return [];
+
         const allClubs = [...new Set(swimmers.map(s => s.club))].sort();
-        const options: SelectOption[] = allClubs.map((c: string) => ({ value: c, label: c }));
-        if (currentUser?.role === 'admin' || currentUser?.role === 'superadmin') {
+        
+        if (currentUser.role === 'superadmin') {
+            const options: SelectOption[] = allClubs.map((c: string) => ({ value: c, label: c }));
             options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs (Admin)' });
+            return options;
         }
-        return options;
+
+        if (currentUser.clubName) {
+            return [{ value: currentUser.clubName, label: currentUser.clubName }];
+        }
+        
+        return [];
     }, [swimmers, currentUser]);
 
     useEffect(() => {
@@ -88,7 +101,6 @@ const ClubStartingListPage: React.FC = () => {
 
                 const eventResults = results.filter(r => r.eventId === selectedEventId);
                 
-                // 1. Determine all unique races in the event
                 const raceMap = new Map<string, RaceDefinition>();
                 eventResults.forEach(result => {
                     const swimmer = swimmers.find(s => s.id === result.swimmerId);
@@ -102,7 +114,6 @@ const ClubStartingListPage: React.FC = () => {
                 });
                 const initialUniqueRaces = Array.from(raceMap.values());
                 
-                // 2. Order the races
                 let orderedUniqueRaces: RaceDefinition[] = [];
                 const customOrderedKeys = await getEventProgramOrder(selectedEventId);
                 if (customOrderedKeys) {
@@ -121,7 +132,6 @@ const ClubStartingListPage: React.FC = () => {
                 
                 const numberedUniqueRaces = orderedUniqueRaces.map((race, index) => ({ ...race, acaraNumber: index + 1 }));
 
-                // 3. For each race, generate heats and find swimmers from the selected club
                 const finalStartingList: ClubRaceInfo[] = [];
                 numberedUniqueRaces.forEach((raceDef) => {
                     const raceSwimmersWithSeedTime: SeededSwimmerInfo[] = [];
@@ -166,7 +176,6 @@ const ClubStartingListPage: React.FC = () => {
                     }
                 });
                 
-                // Sort the final list by acara number
                 finalStartingList.sort((a,b) => {
                     const acaraNumA = parseInt(a.raceLabel.match(/^Acara (\d+)/)?.[1] || '0');
                     const acaraNumB = parseInt(b.raceLabel.match(/^Acara (\d+)/)?.[1] || '0');
@@ -183,7 +192,7 @@ const ClubStartingListPage: React.FC = () => {
         };
 
         generateStartingList();
-    }, [selectedEventId, selectedClub, events, swimmers, results]);
+    }, [selectedEventId, selectedClub, events, swimmers, results, getEventProgramOrder]);
 
     const handlePrint = () => {
         if (!selectedEventId || !selectedClub || !events.length) return;
@@ -210,7 +219,7 @@ const ClubStartingListPage: React.FC = () => {
             <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <FormField label="Select Event" id="event-select" name="event-select" type="select" options={eventOptions} value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)} containerClassName="mb-0" />
-                    <FormField label="Select Club" id="club-select" name="club-select" type="select" options={clubOptions} value={selectedClub} onChange={e => setSelectedClub(e.target.value)} containerClassName="mb-0" />
+                    <FormField label="Select Club" id="club-select" name="club-select" type="select" options={clubOptions} value={selectedClub} onChange={e => setSelectedClub(e.target.value)} containerClassName="mb-0" disabled={currentUser?.role !== 'superadmin'} />
                     <button onClick={handlePrint} disabled={!selectedEventId || !selectedClub || startingList.length === 0} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <PrinterIcon className="h-5 w-5 mr-2" />
                         Print List

@@ -6,8 +6,8 @@ import { ObjectId } from 'mongodb';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authData = verifyToken(req);
-  if (!authData.authorized || !authData.role) {
-    return res.status(401).json({ message: authData.message || "Unauthorized" });
+  if (!authData.authorized || authData.role !== 'superadmin') {
+    return res.status(403).json({ message: "Forbidden: Only superadmins can manage user accounts." });
   }
 
   const { db } = await connectToDatabase();
@@ -16,17 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Forbidden: You do not have permission to view users.' });
-        }
-        
-        let query = {};
-        if (authData.role === 'admin' && authData.clubId) {
-            query = { clubId: new ObjectId(authData.clubId) };
-        }
-        // Superadmin gets all users (empty query)
+        const query = {}; // Superadmin gets all users
 
-        // Join with clubs to get clubName
         const users = await usersCollection.aggregate([
             { $match: query },
             {
@@ -40,33 +31,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             { $unwind: { path: '$clubInfo', preserveNullAndEmptyArrays: true } },
             {
                 $project: {
-                    // This is now a pure inclusion projection.
-                    // 'password' is omitted, so it is excluded from the result.
-                    // '_id' is included by default.
-                    username: 1,
-                    role: 1,
-                    clubId: { $ifNull: [ { $toString: "$clubId" }, null ] },
-                    clubName: '$clubInfo.name'
+                    password: 0, // Exclude password from the result
+                    'clubInfo._id': 0,
+                    'clubInfo.createdAt': 0
                 }
             }
-        ]).sort({ clubName: 1, username: 1 }).toArray();
+        ]).sort({ 'clubInfo.name': 1, username: 1 }).toArray();
 
         const transformedUsers = users.map(user => {
-          const { _id, ...rest } = user;
-          return { id: _id.toHexString(), ...rest };
+          const { _id, clubId, clubInfo, ...rest } = user;
+          return { 
+            id: _id.toHexString(), 
+            clubId: clubId ? clubId.toHexString() : null,
+            clubName: clubInfo?.name || null,
+            ...rest 
+          };
         });
 
         return res.status(200).json(transformedUsers);
       }
 
-      case 'POST': { // Create a new user
-        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Forbidden: You do not have permission to create users.' });
-        }
-
+      case 'POST': { // Create a new user (Superadmin only)
         const { username, password, role, clubId, newClubName } = req.body;
         if (!username || !password || !role) {
           return res.status(400).json({ message: 'Username, password, and role are required.' });
+        }
+
+        if (role !== 'admin' && role !== 'user') {
+            return res.status(400).json({ message: "Superadmins can only create 'admin' or 'user' roles." });
         }
 
         const existingUser = await usersCollection.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
@@ -75,41 +67,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        let clubIdForNewUser: ObjectId | null = null;
+        let clubIdForNewUser: ObjectId;
 
-        if (authData.role === 'superadmin') {
-            if (role === 'admin') {
-                clubIdForNewUser = null; // System-level admins have no club
-            } else if (role === 'user') {
-                if (newClubName) {
-                    const clubsCollection = db.collection('clubs');
-                    const existingClub = await clubsCollection.findOne({ name: { $regex: new RegExp(`^${newClubName.trim()}$`, 'i') } });
-                    if (existingClub) {
-                        return res.status(409).json({ message: `Club "${newClubName}" already exists.` });
-                    }
-                    const newClubDoc = { name: newClubName.trim(), createdAt: new Date() };
-                    const clubResult = await clubsCollection.insertOne(newClubDoc);
-                    clubIdForNewUser = clubResult.insertedId;
-                } else if (clubId && ObjectId.isValid(clubId)) {
-                    clubIdForNewUser = new ObjectId(clubId);
-                    const clubsCollection = db.collection('clubs');
-                    if (!(await clubsCollection.findOne({ _id: clubIdForNewUser }))) {
-                        return res.status(400).json({ message: `Club with ID ${clubId} not found.` });
-                    }
-                } else {
-                    return res.status(400).json({ message: 'A user must be assigned to an existing or new club.' });
-                }
-            } else {
-                return res.status(400).json({ message: "Superadmin can only create 'admin' or 'user' roles." });
+        if (newClubName) {
+            const clubsCollection = db.collection('clubs');
+            const existingClub = await clubsCollection.findOne({ name: { $regex: new RegExp(`^${newClubName.trim()}$`, 'i') } });
+            if (existingClub) {
+                return res.status(409).json({ message: `Club "${newClubName}" already exists.` });
             }
-        } else { // 'admin' role
-            if (role !== 'user') {
-                 return res.status(403).json({ message: "Admins can only create users with the 'user' role." });
+            const newClubDoc = { name: newClubName.trim(), createdAt: new Date() };
+            const clubResult = await clubsCollection.insertOne(newClubDoc);
+            clubIdForNewUser = clubResult.insertedId;
+        } else if (clubId && ObjectId.isValid(clubId)) {
+            clubIdForNewUser = new ObjectId(clubId);
+            const clubsCollection = db.collection('clubs');
+            if (!(await clubsCollection.findOne({ _id: clubIdForNewUser }))) {
+                return res.status(400).json({ message: `Club with ID ${clubId} not found.` });
             }
-            if (!authData.clubId) {
-                return res.status(400).json({ message: "Admin account is not associated with a club." });
-            }
-            clubIdForNewUser = new ObjectId(authData.clubId);
+        } else {
+            return res.status(400).json({ message: "A club assignment (either existing or new) is required for this role." });
         }
         
         const newUserDocument = {
@@ -122,12 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const result = await usersCollection.insertOne(newUserDocument);
         const { password: _, ...userToReturn } = newUserDocument;
 
-        if (userToReturn.clubId) {
-            // @ts-ignore
-            userToReturn.clubId = userToReturn.clubId.toHexString();
-        }
-
-        return res.status(201).json({ id: result.insertedId.toHexString(), ...userToReturn });
+        return res.status(201).json({ id: result.insertedId.toHexString(), ...userToReturn, clubId: clubIdForNewUser.toHexString() });
       }
 
       default:

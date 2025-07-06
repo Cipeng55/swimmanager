@@ -23,7 +23,7 @@ export interface LetterAgeRange {
 
 export interface SwimEvent {
   id: string;
-  clubId: string; // Multi-tenancy key
+  clubId: string; // Multi-tenancy key - NOW MANDATORY
   name: string;
   date: string; // ISO date string (e.g., "2024-07-28")
   location: string;
@@ -40,7 +40,7 @@ export type UserRole = 'superadmin' | 'admin' | 'user';
 
 export interface User {
   id: string;
-  clubId: string | null; // Can be null for superadmin/admin
+  clubId: string | null; // Can be null for superadmin
   username: string;
   password?: string; // Should be hashed in a real backend.
   role: UserRole;
@@ -54,8 +54,7 @@ export interface NewUser {
 
 // Payload for Super Admin creating users
 export interface AdminNewUserPayload extends NewUser {
-  // When role is 'admin', no club info is needed.
-  // When role is 'user', one of these is needed.
+  // When role is 'admin' or 'user', one of these is needed.
   clubId?: string;
   newClubName?: string;
 }
@@ -63,7 +62,7 @@ export interface AdminNewUserPayload extends NewUser {
 
 export interface CurrentUser {
   id: string;
-  clubId: string | null; // Can be null for superadmin/admin
+  clubId: string | null; // Can be null for superadmin
   clubName: string;
   username: string;
   role: UserRole;

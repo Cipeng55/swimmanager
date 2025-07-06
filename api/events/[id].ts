@@ -19,18 +19,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const eventsCollection = db.collection('events');
   const resultsCollection = db.collection('results');
   const programOrderCollection = db.collection('programOrders');
+  
+  const event = await eventsCollection.findOne({ _id: objectId });
+  if (!event) {
+    return res.status(404).json({ message: 'Event not found' });
+  }
 
-  const query = authData.role === 'superadmin' 
-    ? { _id: objectId }
-    : { _id: objectId, clubId: authData.clubId };
+  // Permission check: superadmin can access anything. Other roles must match clubId.
+  if (authData.role !== 'superadmin' && event.clubId?.toString() !== authData.clubId) {
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to access this event.' });
+  }
+
 
   try {
     switch (req.method) {
       case 'GET': {
-        const event = await eventsCollection.findOne(query);
-        if (!event) {
-          return res.status(404).json({ message: 'Event not found or not part of your club' });
-        }
         const { _id, ...eventData } = event;
         return res.status(200).json({ id: _id.toHexString(), ...eventData });
       }
@@ -40,11 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can update events.' });
         }
         const eventData = req.body;
-        // Ensure clubId isn't overwritten
         delete eventData.clubId;
-        const result = await eventsCollection.updateOne(query, { $set: eventData });
+        const result = await eventsCollection.updateOne({ _id: objectId }, { $set: eventData });
         if (result.matchedCount === 0) {
-          return res.status(404).json({ message: 'Event not found or not part of your club' });
+          return res.status(404).json({ message: 'Event not found during update' });
         }
         return res.status(200).json({ message: 'Event updated successfully' });
       }
@@ -53,18 +55,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (authData.role !== 'admin' && authData.role !== 'superadmin') {
           return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can delete events.' });
         }
-        const eventToDelete = await eventsCollection.findOne(query);
-        if (!eventToDelete) {
-          return res.status(404).json({ message: 'Event not found or not part of your club' });
-        }
-
-        // Cascade delete using event ID string
-        await resultsCollection.deleteMany({ eventId: id }); // Superadmin can delete results from any club for this event
-        await programOrderCollection.deleteOne({ eventId: id }); // Superadmin can delete program order from any club for this event
-        const result = await eventsCollection.deleteOne(query);
+        
+        await resultsCollection.deleteMany({ eventId: id });
+        await programOrderCollection.deleteOne({ eventId: id });
+        const result = await eventsCollection.deleteOne({ _id: objectId });
 
         if (result.deletedCount === 0) {
-          // This case should be rare due to the check above but is a good safeguard
           return res.status(404).json({ message: 'Event not found during deletion' });
         }
         return res.status(204).end();

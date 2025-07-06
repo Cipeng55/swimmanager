@@ -101,7 +101,7 @@ const DashboardPage: React.FC = () => {
       <section className="mb-12">
         <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+          {currentUser?.role === 'admin' && (
             <Link
               to="/events/add"
               className="bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
@@ -110,7 +110,7 @@ const DashboardPage: React.FC = () => {
               Add New Event
             </Link>
           )}
-          {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin' || currentUser?.role === 'user') && (
+          {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
             <Link
               to="/swimmers/add"
               className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
@@ -119,7 +119,7 @@ const DashboardPage: React.FC = () => {
               Add New Swimmer
             </Link>
           )}
-          {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin' || currentUser?.role === 'user') && (
+          {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
             <Link
               to="/results/add"
               className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
@@ -130,21 +130,26 @@ const DashboardPage: React.FC = () => {
           )}
            {currentUser?.role === 'user' && (summaryItems.length > 0) && (
             <p className="text-sm text-gray-500 dark:text-gray-400 md:col-span-2 lg:col-span-3">
-              As a user, you can add swimmers and results, and view all data for your club. For other actions, please contact your club administrator.
+              As a user, you can add swimmers and results for your club. For event management, please contact your administrator.
+            </p>
+          )}
+          {currentUser?.role === 'admin' && (summaryItems.length > 0) && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 md:col-span-2 lg:col-span-3">
+              As an Admin, you can create and manage events, swimmers, and results for your assigned club.
             </p>
           )}
 
         </div>
       </section>
 
-      {(currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
+      {currentUser?.role === 'superadmin' && (
         <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 mb-8">
-            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-3">Admin Tools</h2>
+            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-3">Superadmin Tools</h2>
             <Link
                 to="/users/manage"
                 className="text-primary hover:underline"
             >
-                Manage Users
+                Manage Users & Clubs
             </Link>
         </section>
       )}

@@ -22,20 +22,20 @@ const UserManagementPage: React.FC = () => {
   const { currentUser } = useAuth();
 
   const fetchData = async () => {
-    if (!currentUser) {
-      setError("You must be logged in to manage users.");
+    if (!currentUser || currentUser.role !== 'superadmin') {
+      setError("Forbidden: You do not have permission to view this page.");
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const allUsers = await apiGetAllUsers();
+      const [allUsers, allClubs] = await Promise.all([
+        apiGetAllUsers(),
+        getClubs()
+      ]);
       setUsers(allUsers);
-      if (currentUser.role === 'superadmin') {
-        const allClubs = await getClubs();
-        setClubs(allClubs);
-      }
+      setClubs(allClubs);
     } catch (err: any) {
       setError(err.message || 'Failed to load data.');
     } finally {
@@ -47,15 +47,10 @@ const UserManagementPage: React.FC = () => {
     fetchData();
   }, [currentUser]);
 
-  const roleOptions: SelectOption[] = useMemo(() => {
-    if (currentUser?.role === 'superadmin') {
-      return [
-        { value: 'user', label: 'User' },
-        { value: 'admin', label: 'Admin (System-Level)' },
-      ];
-    }
-    return [{ value: 'user', label: 'User' }];
-  }, [currentUser]);
+  const roleOptions: SelectOption[] = [
+    { value: 'user', label: 'User (Manages Swimmers/Results)' },
+    { value: 'admin', label: 'Admin (Manages Events & Club Users)' },
+  ];
 
   const clubOptions: SelectOption[] = useMemo(() => 
     clubs.map(c => ({ value: c.id, label: c.name })), 
@@ -69,7 +64,7 @@ const UserManagementPage: React.FC = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (currentUser?.role !== 'superadmin') return;
     setFormError(null);
 
     if (!newUser.username?.trim() || !newUser.password?.trim() || !newUser.role) {
@@ -83,20 +78,19 @@ const UserManagementPage: React.FC = () => {
         role: newUser.role,
     };
     
-    if (currentUser.role === 'superadmin' && newUser.role === 'user') {
-        if (clubCreationMode === 'new') {
-            if (!newClubName.trim()) {
-                setFormError("New club name cannot be empty.");
-                return;
-            }
-            payload.newClubName = newClubName.trim();
-        } else {
-            if (!newUser.clubId) {
-                setFormError("A club must be selected for the new user.");
-                return;
-            }
-            payload.clubId = newUser.clubId;
+    // Both admin and user roles require a club
+    if (clubCreationMode === 'new') {
+        if (!newClubName.trim()) {
+            setFormError("New club name cannot be empty.");
+            return;
         }
+        payload.newClubName = newClubName.trim();
+    } else {
+        if (!newUser.clubId) {
+            setFormError("A club must be selected for the new user.");
+            return;
+        }
+        payload.clubId = newUser.clubId;
     }
 
     setIsSubmitting(true);
@@ -116,8 +110,8 @@ const UserManagementPage: React.FC = () => {
   
   if (loading) return <LoadingSpinner text="Loading user data..." />;
 
-  const title = currentUser?.role === 'superadmin' ? "System User Management" : "Club User Management";
-  const description = currentUser?.role === 'superadmin' ? "Create and manage Admins and Users for all clubs." : "Create and manage User accounts for your club.";
+  const title = "Account Management (Superadmin)";
+  const description = "As a Superadmin, you can create new Clubs, Admins (Club Managers), and Users.";
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -129,16 +123,14 @@ const UserManagementPage: React.FC = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Existing Users</h2>
+           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Existing Accounts</h2>
            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Username</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Role</th>
-                        {currentUser?.role === 'superadmin' && (
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Club</th>
-                        )}
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Club</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -146,9 +138,7 @@ const UserManagementPage: React.FC = () => {
                         <tr key={user.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.username}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 capitalize">{user.role}</td>
-                            {currentUser?.role === 'superadmin' && (
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.clubName || 'N/A (System-Level)'}</td>
-                            )}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.clubName || 'N/A'}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -157,7 +147,7 @@ const UserManagementPage: React.FC = () => {
         </div>
 
         <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Add New User</h2>
+           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Create New Account</h2>
            <form onSubmit={handleAddUser} className="space-y-4">
             {formError && <p className="text-sm text-red-500">{formError}</p>}
             <FormField label="Username" id="username" name="username" type="text" value={newUser.username || ''} onChange={handleInputChange} required disabled={isSubmitting} />
@@ -171,56 +161,55 @@ const UserManagementPage: React.FC = () => {
                 options={roleOptions}
                 onChange={handleInputChange}
                 required
-                disabled={isSubmitting || currentUser?.role === 'admin'}
+                disabled={isSubmitting}
             />
-            {currentUser?.role === 'superadmin' && newUser.role === 'user' && (
-                <div className="space-y-4 p-3 border rounded-md border-gray-300 dark:border-gray-600">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Club Assignment</p>
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center">
-                            <input type="radio" id="existingClub" name="clubCreationMode" value="existing" checked={clubCreationMode === 'existing'} onChange={() => setClubCreationMode('existing')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
-                            <label htmlFor="existingClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Existing Club</label>
-                        </div>
-                        <div className="flex items-center">
-                            <input type="radio" id="newClub" name="clubCreationMode" value="new" checked={clubCreationMode === 'new'} onChange={() => setClubCreationMode('new')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
-                            <label htmlFor="newClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Create New</label>
-                        </div>
+            
+            <div className="space-y-4 p-3 border rounded-md border-gray-300 dark:border-gray-600">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Club Assignment</p>
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                        <input type="radio" id="existingClub" name="clubCreationMode" value="existing" checked={clubCreationMode === 'existing'} onChange={() => setClubCreationMode('existing')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
+                        <label htmlFor="existingClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Existing Club</label>
                     </div>
-        
-                    {clubCreationMode === 'existing' ? (
-                        <FormField
-                            label=""
-                            id="clubId"
-                            name="clubId"
-                            type="select"
-                            options={clubOptions}
-                            value={newUser.clubId || ''}
-                            onChange={handleInputChange}
-                            required
-                            placeholder="Select an existing club..."
-                            disabled={isSubmitting}
-                            containerClassName="mb-0"
-                        />
-                    ) : (
-                        <FormField
-                            label=""
-                            id="newClubName"
-                            name="newClubName"
-                            type="text"
-                            placeholder="Enter new club name..."
-                            value={newClubName}
-                            onChange={(e) => setNewClubName(e.target.value)}
-                            required
-                            disabled={isSubmitting}
-                            containerClassName="mb-0"
-                        />
-                    )}
+                    <div className="flex items-center">
+                        <input type="radio" id="newClub" name="clubCreationMode" value="new" checked={clubCreationMode === 'new'} onChange={() => setClubCreationMode('new')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
+                        <label htmlFor="newClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Create New</label>
+                    </div>
                 </div>
-            )}
+    
+                {clubCreationMode === 'existing' ? (
+                    <FormField
+                        label=""
+                        id="clubId"
+                        name="clubId"
+                        type="select"
+                        options={clubOptions}
+                        value={newUser.clubId || ''}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Select an existing club..."
+                        disabled={isSubmitting}
+                        containerClassName="mb-0"
+                    />
+                ) : (
+                    <FormField
+                        label=""
+                        id="newClubName"
+                        name="newClubName"
+                        type="text"
+                        placeholder="Enter new club name..."
+                        value={newClubName}
+                        onChange={(e) => setNewClubName(e.target.value)}
+                        required
+                        disabled={isSubmitting}
+                        containerClassName="mb-0"
+                    />
+                )}
+            </div>
             
             <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light disabled:opacity-50">
               {isSubmitting && <ButtonSpinnerIcon className="h-5 w-5 mr-2" />}
-              {isSubmitting ? 'Adding...' : 'Add User'}
+              {isSubmitting ? 'Adding...' : 'Create Account'}
             </button>
            </form>
         </div>

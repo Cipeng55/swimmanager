@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(404).json({ message: 'Result not found or not part of your club' });
         }
         
-        if (authData.role !== 'superadmin' && authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
+        if (authData.role !== 'superadmin' && existingResult.createdByUserId !== authData.userId) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this result.' });
         }
         
@@ -59,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(404).json({ message: 'Result not found or not part of your club' });
         }
 
-        if (authData.role !== 'superadmin' && authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
+        if (authData.role !== 'superadmin' && existingResult.createdByUserId !== authData.userId) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this result.' });
         }
 
