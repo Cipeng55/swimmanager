@@ -139,7 +139,7 @@ const EventProgramPage: React.FC = () => {
       let orderedRaces: RaceDefinition[] = [];
 
       if (customOrderedKeys) {
-        const initialRacesMap = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
+        const initialRacesMap: Map<string, RaceDefinition> = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
         customOrderedKeys.forEach(key => {
           if (initialRacesMap.has(key)) {
             orderedRaces.push(initialRacesMap.get(key)!);
