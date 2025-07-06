@@ -1,9 +1,9 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './src/App';
 import { HashRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
+import { AuthProvider } from './src/contexts/AuthContext'; // Import AuthProvider
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
