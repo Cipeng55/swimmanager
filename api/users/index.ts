@@ -63,9 +63,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to create users.' });
         }
 
-        const { username, password } = req.body;
-        if (!username || !password) {
-          return res.status(400).json({ message: 'Username and password are required.' });
+        const { username, password, role, clubId } = req.body;
+        if (!username || !password || !role) {
+          return res.status(400).json({ message: 'Username, password, and role are required.' });
         }
 
         const existingUser = await usersCollection.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
@@ -77,15 +77,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let newUserDocument;
 
         if (authData.role === 'superadmin') {
-            // Superadmin creates a user with 'user' role and no club affiliation yet.
+            if (role !== 'admin' && role !== 'user') {
+                return res.status(400).json({ message: "Superadmin can only create 'admin' or 'user' roles." });
+            }
+            if (role === 'admin' && (!clubId || !ObjectId.isValid(clubId))) {
+                return res.status(400).json({ message: "A valid club ID is required to create an admin user." });
+            }
+            
             newUserDocument = {
               username,
               password: hashedPassword,
-              role: 'user', // Default role
-              clubId: null, // No club assigned on creation by superadmin
+              role,
+              clubId: clubId ? new ObjectId(clubId) : null,
             };
         } else { // Admin role
-            // Admin creates a user within their own club.
+            if (role !== 'user') {
+                 return res.status(403).json({ message: "Admins can only create users with the 'user' role." });
+            }
             newUserDocument = {
               username,
               password: hashedPassword,

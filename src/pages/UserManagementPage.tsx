@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { User, NewUser, AdminNewUserPayload, Club, SelectOption, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, getClubs } from '../services/api';
@@ -45,6 +45,21 @@ const UserManagementPage: React.FC = () => {
     fetchData();
   }, [currentUser]);
 
+  const roleOptions: SelectOption[] = useMemo(() => {
+    if (currentUser?.role === 'superadmin') {
+      return [
+        { value: 'user', label: 'User' },
+        { value: 'admin', label: 'Admin' },
+      ];
+    }
+    return [{ value: 'user', label: 'User' }];
+  }, [currentUser]);
+
+  const clubOptions: SelectOption[] = useMemo(() => 
+    clubs.map(c => ({ value: c.id, label: c.name })), 
+    [clubs]
+  );
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewUser(prev => ({ ...prev, [name]: value }));
@@ -58,24 +73,26 @@ const UserManagementPage: React.FC = () => {
         setFormError("Username and password are required.");
         return;
     }
+    if (currentUser.role === 'superadmin' && newUser.role === 'admin' && !newUser.clubId) {
+        setFormError("A club must be assigned to create an Admin user.");
+        return;
+    }
+
 
     setIsSubmitting(true);
     setFormError(null);
     try {
-        // The payload sent to the backend now only contains the essential info from the form.
-        // The backend will determine the role and club based on the creator's credentials.
-        const payload = { 
-            username: newUser.username!, 
+        const payload: AdminNewUserPayload = {
+            username: newUser.username!,
             password: newUser.password!,
+            role: newUser.role! as UserRole,
+            clubId: newUser.clubId!,
         };
         
-        // The `apiCreateUser` function expects a more complete type, but our backend is now flexible.
-        // We cast to `any` to reflect that the frontend is intentionally sending a partial object.
-        await apiCreateUser(payload as any); 
+        await apiCreateUser(payload);
         
-        // Reset form for the next entry
-        setNewUser({ username: '', password: ''});
-        fetchData(); // Refresh user list
+        setNewUser({ username: '', password: '', role: 'user', clubId: '' });
+        fetchData(); 
     } catch (err: any) {
         setFormError(err.message || "Failed to create user. Username might already exist.");
     } finally {
@@ -83,8 +100,6 @@ const UserManagementPage: React.FC = () => {
     }
   };
   
-  const clubOptions: SelectOption[] = clubs.map(c => ({ value: c.id, label: c.name }));
-
   if (loading) return <LoadingSpinner text="Loading user data..." />;
 
   const title = currentUser?.role === 'superadmin' ? "System User Management" : "Club User Management";
@@ -131,8 +146,33 @@ const UserManagementPage: React.FC = () => {
            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Add New User</h2>
            <form onSubmit={handleAddUser} className="space-y-4">
             {formError && <p className="text-sm text-red-500">{formError}</p>}
-            <FormField label="Username" id="username" name="username" type="text" value={newUser.username || ''} onChange={handleInputChange} required />
-            <FormField label="Password" id="password" name="password" type="password" value={newUser.password || ''} onChange={handleInputChange} required />
+            <FormField label="Username" id="username" name="username" type="text" value={newUser.username || ''} onChange={handleInputChange} required disabled={isSubmitting} />
+            <FormField label="Password" id="password" name="password" type="password" value={newUser.password || ''} onChange={handleInputChange} required disabled={isSubmitting}/>
+            <FormField
+                label="Role"
+                id="role"
+                name="role"
+                type="select"
+                value={newUser.role || 'user'}
+                options={roleOptions}
+                onChange={handleInputChange}
+                required
+                disabled={isSubmitting || currentUser?.role === 'admin'}
+            />
+            {currentUser?.role === 'superadmin' && newUser.role === 'admin' && (
+                <FormField
+                    label="Assign to Club"
+                    id="clubId"
+                    name="clubId"
+                    type="select"
+                    options={clubOptions}
+                    value={newUser.clubId || ''}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Select a club..."
+                    disabled={isSubmitting}
+                />
+            )}
             
             <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light disabled:opacity-50">
               {isSubmitting && <ButtonSpinnerIcon className="h-5 w-5 mr-2" />}
