@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, NewUser, AdminNewUserPayload, Club, SelectOption, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, getClubs, createClub } from '../services/api'; // Import club-related APIs
+import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, getClubs } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
@@ -13,8 +13,6 @@ const UserManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [newUser, setNewUser] = useState<Partial<AdminNewUserPayload>>({ username: '', password: '', role: 'user', clubId: '' });
-  const [newClubName, setNewClubName] = useState('');
-  const [showNewClubField, setShowNewClubField] = useState(false);
   
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,34 +51,16 @@ const UserManagementPage: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === 'clubId' && value === 'CREATE_NEW') {
-        setShowNewClubField(true);
-        setNewUser(prev => ({ ...prev, clubId: 'CREATE_NEW' }));
-    } else {
-        if (name === 'clubId') {
-            setShowNewClubField(false);
-            setNewClubName('');
-        }
-        setNewUser(prev => ({ ...prev, [name]: value }));
-    }
+    setNewUser(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     
-    let finalClubId = newUser.clubId;
-
-    if (currentUser.role === 'superadmin') {
-      if (showNewClubField) {
-        if (!newClubName.trim()) {
-          setFormError("New club name cannot be empty.");
-          return;
-        }
-      } else if (!newUser.clubId) {
-        setFormError("Please select a club.");
-        return;
-      }
+    if (currentUser.role === 'superadmin' && !newUser.clubId) {
+      setFormError("Please select a club.");
+      return;
     }
 
     if (!newUser.username?.trim() || !newUser.password?.trim()) {
@@ -94,15 +74,11 @@ const UserManagementPage: React.FC = () => {
         let payload: NewUser | AdminNewUserPayload;
 
         if (currentUser.role === 'superadmin') {
-            if (showNewClubField) {
-                const newClub = await createClub({ name: newClubName });
-                finalClubId = newClub.id;
-            }
             payload = { 
                 username: newUser.username!, 
                 password: newUser.password!, 
                 role: newUser.role as UserRole,
-                clubId: finalClubId!
+                clubId: newUser.clubId!
             };
         } else { // Admin role
             payload = { 
@@ -114,9 +90,7 @@ const UserManagementPage: React.FC = () => {
         
         await apiCreateUser(payload);
         setNewUser({ username: '', password: '', role: 'user', clubId: clubs.length > 0 ? clubs[0].id : '' });
-        setNewClubName('');
-        setShowNewClubField(false);
-        fetchData(); // Refresh user and club lists
+        fetchData(); // Refresh user list
     } catch (err: any) {
         setFormError(err.message || "Failed to create user. Username might already exist.");
     } finally {
@@ -125,9 +99,6 @@ const UserManagementPage: React.FC = () => {
   };
   
   const clubOptions: SelectOption[] = clubs.map(c => ({ value: c.id, label: c.name }));
-  if (currentUser?.role === 'superadmin') {
-      clubOptions.push({ value: 'CREATE_NEW', label: '--- Create New Club ---' });
-  }
 
   if (loading) return <LoadingSpinner text="Loading user data..." />;
 
@@ -181,10 +152,17 @@ const UserManagementPage: React.FC = () => {
             {currentUser?.role === 'superadmin' && (
                 <>
                     <FormField label="Role" id="role" name="role" type="select" options={[{value: 'user', label: 'User'}, {value: 'admin', label: 'Admin'}]} value={newUser.role || 'user'} onChange={handleInputChange} required />
-                    <FormField label="Club" id="clubId" name="clubId" type="select" options={clubOptions} value={newUser.clubId || ''} onChange={handleInputChange} required />
-                    {showNewClubField && (
-                        <FormField label="New Club Name" id="newClubName" name="newClubName" type="text" value={newClubName} onChange={e => setNewClubName(e.target.value)} required />
-                    )}
+                    <FormField
+                      label="Club"
+                      id="clubId"
+                      name="clubId"
+                      type="select"
+                      options={clubOptions}
+                      value={newUser.clubId || ''}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Select a club"
+                    />
                 </>
             )}
             
