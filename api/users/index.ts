@@ -21,8 +21,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         
         let query = {};
-        if (authData.role === 'admin') {
-            query = { clubId: new ObjectId(authData.clubId!) };
+        if (authData.role === 'admin' && authData.clubId) {
+            query = { clubId: new ObjectId(authData.clubId) };
         }
         // Superadmin gets all users (empty query)
 
@@ -40,11 +40,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             { $unwind: { path: '$clubInfo', preserveNullAndEmptyArrays: true } },
             {
                 $project: {
-                    password: 0, // Exclude password
-                    clubId: { $ifNull: [ { $toString: "$clubId" }, null ] },
-                    _id: 1,
+                    // This is now a pure inclusion projection.
+                    // 'password' is omitted, so it is excluded from the result.
+                    // '_id' is included by default.
                     username: 1,
                     role: 1,
+                    clubId: { $ifNull: [ { $toString: "$clubId" }, null ] },
                     clubName: '$clubInfo.name'
                 }
             }
@@ -105,7 +106,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (role !== 'user') {
                  return res.status(403).json({ message: "Admins can only create users with the 'user' role." });
             }
-            clubIdForNewUser = new ObjectId(authData.clubId!);
+            if (!authData.clubId) {
+                return res.status(400).json({ message: "Admin account is not associated with a club." });
+            }
+            clubIdForNewUser = new ObjectId(authData.clubId);
         }
         
         const newUserDocument = {
