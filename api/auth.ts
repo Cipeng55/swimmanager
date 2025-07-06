@@ -38,21 +38,29 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ message: 'Invalid username or password.' });
         }
 
-        if (!user.clubId) {
-            return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
+        let clubId: string | null = null;
+        let clubName: string = 'System Administrator'; // Default for system-level admin
+
+        // A 'user' must have a club. An 'admin' does not.
+        if (user.role === 'user') {
+            if (!user.clubId) {
+                return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
+            }
+            
+            const club = await clubsCollection.findOne({ _id: new ObjectId(user.clubId) });
+            if (!club) {
+                return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
+            }
+            clubId = user.clubId.toHexString();
+            clubName = club.name;
         }
-        
-        const club = await clubsCollection.findOne({ _id: new ObjectId(user.clubId) });
-        if (!club) {
-            return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
-        }
-        const clubName = club.name;
+        // If user.role is 'admin', we use the defaults: clubId = null, clubName = 'System Administrator'
 
         const payload = {
             userId: user._id.toHexString(),
             username: user.username,
             role: user.role,
-            clubId: user.clubId.toHexString(),
+            clubId: clubId, // This will be null for 'admin'
             clubName: clubName,
         };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
