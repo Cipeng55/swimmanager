@@ -19,38 +19,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const swimmersCollection = db.collection('swimmers');
   const resultsCollection = db.collection('results');
 
-  // General query for GET, specific query for PUT/DELETE is handled by permission check
-  const getQuery = authData.role === 'superadmin' 
-    ? { _id: objectId }
-    : { _id: objectId, clubId: authData.clubId };
-
   try {
+    const swimmer = await swimmersCollection.findOne({ _id: objectId });
+    if (!swimmer) {
+        return res.status(404).json({ message: 'Swimmer not found' });
+    }
+
+    // Permission check for GET
+    const canView = authData.role === 'superadmin' || 
+                    authData.role === 'admin' || 
+                    (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
+
+    if (!canView) {
+        return res.status(403).json({ message: 'Forbidden: You do not have permission to view this swimmer.' });
+    }
+
     switch (req.method) {
       case 'GET': {
-        const swimmer = await swimmersCollection.findOne(getQuery);
-        if (!swimmer) {
-          return res.status(404).json({ message: 'Swimmer not found or not part of your club' });
-        }
         const { _id, ...swimmerData } = swimmer;
         return res.status(200).json({ id: _id.toHexString(), ...swimmerData });
       }
 
       case 'PUT': {
-        const swimmerToModify = await swimmersCollection.findOne({ _id: objectId });
-        if (!swimmerToModify) {
-            return res.status(404).json({ message: 'Swimmer not found' });
-        }
-
         const canModify = authData.role === 'superadmin' || 
-                          (authData.role === 'user' && swimmerToModify.clubId?.toString() === authData.clubId);
+                          (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
         
         if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this swimmer.' });
         }
 
         const swimmerData = req.body;
-        delete swimmerData.clubId; // Prevent changing clubId
-        delete swimmerData.createdByUserId; // Prevent changing creator
+        // Prevent changing ownership details
+        delete swimmerData.clubUserId;
+        delete swimmerData.clubName;
 
         const result = await swimmersCollection.updateOne({ _id: objectId }, { $set: swimmerData });
         if (result.matchedCount === 0) {
@@ -60,13 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        const swimmerToDelete = await swimmersCollection.findOne({ _id: objectId });
-        if (!swimmerToDelete) {
-             return res.status(404).json({ message: 'Swimmer not found' });
-        }
-
         const canDelete = authData.role === 'superadmin' || 
-                          (authData.role === 'user' && swimmerToDelete.clubId?.toString() === authData.clubId);
+                          (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
 
         if (!canDelete) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this swimmer.' });

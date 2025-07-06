@@ -103,7 +103,7 @@ const PrintableClubStartingList: React.FC = () => {
                     const currentSwimmerAgeGroup = getAgeGroup(swimmer, eventDetails);
                     if (currentSwimmerAgeGroup === raceDef.ageGroup && timeToMilliseconds(r.seedTime) >= 0) {
                         raceSwimmersWithSeedTime.push({
-                            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, club: swimmer.club, gender: swimmer.gender,
+                            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
                             ageGroup: currentSwimmerAgeGroup, seedTimeMs: timeToMilliseconds(r.seedTime), seedTimeStr: r.seedTime,
                             swimmerDob: swimmer.dob, swimmerGradeLevel: swimmer.gradeLevel,
                         });
@@ -117,9 +117,9 @@ const PrintableClubStartingList: React.FC = () => {
 
             heats.forEach(heat => {
                 heat.lanes.forEach(lane => {
-                    if (lane.swimmer && (clubName === 'ALL_CLUBS' || lane.swimmer.club === clubName)) {
+                    if (lane.swimmer && (clubName === 'ALL_CLUBS' || lane.swimmer.clubName === clubName)) {
                         clubSwimmersInThisRace.push({
-                            swimmerName: lane.swimmer.name, swimmerClub: lane.swimmer.club, raceLabel: raceLabelWithAcara,
+                            swimmerName: lane.swimmer.name, swimmerClubName: lane.swimmer.clubName, raceLabel: raceLabelWithAcara,
                             heatNumber: heat.heatNumber, laneNumber: lane.lane, seedTime: lane.swimmer.seedTimeStr,
                         });
                     }
@@ -229,7 +229,7 @@ const PrintableClubStartingList: React.FC = () => {
                 {clubRace.swimmers.map((swimmerEntry, sIdx) => (
                   <tr key={`${swimmerEntry.swimmerName}-${sIdx}`}>
                     <td>{swimmerEntry.swimmerName}</td>
-                    {isAdminAllClubsView && <td>{swimmerEntry.swimmerClub}</td>}
+                    {isAdminAllClubsView && <td>{swimmerEntry.swimmerClubName}</td>}
                     <td>{swimmerEntry.heatNumber}</td>
                     <td>{swimmerEntry.laneNumber}</td>
                     <td>{swimmerEntry.seedTime}</td>

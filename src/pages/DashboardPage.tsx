@@ -29,13 +29,13 @@ const DashboardPage: React.FC = () => {
         getResults()
       ]);
 
-      setSummaryItems([
+      const allItems: DashboardSummaryItemData[] = [
         {
           id: 'events',
           title: 'Total Events',
           value: events.length,
           icon: <CalendarIcon className="h-8 w-8 text-primary" />,
-          description: 'Manage all your club\'s competitions.',
+          description: 'Manage all available competitions.',
           linkTo: '/events',
         },
         {
@@ -51,37 +51,45 @@ const DashboardPage: React.FC = () => {
           title: 'Recorded Results',
           value: results.length,
           icon: <ClipboardListIcon className="h-8 w-8 text-primary" />,
-          description: 'Browse all recorded swim times for your club.',
+          description: 'Browse all recorded swim times.',
           linkTo: '/results',
         },
-      ]);
+      ];
+
+      // Filter cards based on user role
+      if (currentUser?.role === 'admin') {
+         setSummaryItems(allItems.filter(item => item.id === 'events'));
+      } else if (currentUser?.role === 'user') {
+         setSummaryItems(allItems);
+      } else {
+         setSummaryItems(allItems);
+      }
+
     } catch (err: any) {
       console.error("Failed to load dashboard data:", err);
       setError("Could not load dashboard summary. Please try again. Error: " + err.message);
-        setSummaryItems([
-           { id: 'events', title: 'Total Events', value: 0, icon: <CalendarIcon className="h-8 w-8 text-primary" />, description: 'Manage all your club\'s competitions.', linkTo: '/events' },
-           { id: 'swimmers', title: 'Registered Swimmers', value: 0, icon: <UsersIcon className="h-8 w-8 text-primary" />, description: 'Manage your club\'s swimmer profiles.', linkTo: '/swimmers' },
-           { id: 'results', title: 'Recorded Results', value: 0, icon: <ClipboardListIcon className="h-8 w-8 text-primary" />, description: 'Browse all recorded swim times for your club.', linkTo: '/results' },
-        ]);
+        setSummaryItems([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    if (currentUser) {
+        fetchDashboardData();
+    }
     if (location.state?.unauthorized) {
       setUnauthorizedMsg("You are not authorized to access the requested page.");
       window.history.replaceState({}, document.title)
     }
-  }, [location.state]);
+  }, [location.state, currentUser]);
 
   return (
     <div className="fade-in-effect container mx-auto px-4 py-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
         <p className="text-lg text-gray-600 dark:text-gray-300">
-          Welcome, {currentUser?.username || 'Guest'} to {currentUser?.clubName || 'your club'}. Here's a quick overview.
+          Welcome, {currentUser?.username || 'Guest'} to your dashboard.
         </p>
       </header>
 
@@ -107,38 +115,27 @@ const DashboardPage: React.FC = () => {
               className="bg-primary hover:bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
             >
               <PlusCircleIcon className="h-5 w-5 mr-2" />
-              Add New Event
+              Create New Event
             </Link>
           )}
-          {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
-            <Link
-              to="/swimmers/add"
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
-            >
-              <PlusCircleIcon className="h-5 w-5 mr-2" />
-              Add New Swimmer
-            </Link>
+          {currentUser?.role === 'user' && (
+            <>
+              <Link
+                to="/swimmers/add"
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
+              >
+                <PlusCircleIcon className="h-5 w-5 mr-2" />
+                Add New Swimmer
+              </Link>
+              <Link
+                to="/results/add"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
+              >
+                <PlusCircleIcon className="h-5 w-5 mr-2" />
+                Add Seed Times
+              </Link>
+            </>
           )}
-          {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
-            <Link
-              to="/results/add"
-              className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center justify-center text-center"
-            >
-              <PlusCircleIcon className="h-5 w-5 mr-2" />
-              Add New Result
-            </Link>
-          )}
-           {currentUser?.role === 'user' && (summaryItems.length > 0) && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 md:col-span-2 lg:col-span-3">
-              As a user, you can add swimmers and results for your club. For event management, please contact your administrator.
-            </p>
-          )}
-          {currentUser?.role === 'admin' && (summaryItems.length > 0) && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 md:col-span-2 lg:col-span-3">
-              As an Admin, you can create and manage events, swimmers, and results for your assigned club.
-            </p>
-          )}
-
         </div>
       </section>
 
@@ -149,7 +146,7 @@ const DashboardPage: React.FC = () => {
                 to="/users/manage"
                 className="text-primary hover:underline"
             >
-                Manage Users & Clubs
+                Manage All Accounts
             </Link>
         </section>
       )}

@@ -1,10 +1,5 @@
 import React from 'react';
 
-export interface Club {
-  id: string;
-  name: string;
-}
-
 export interface DashboardSummaryItemData {
   id: string;
   title: string;
@@ -23,49 +18,47 @@ export interface LetterAgeRange {
 
 export interface SwimEvent {
   id: string;
-  clubId: string; // Multi-tenancy key - NOW MANDATORY
   name: string;
   date: string; // ISO date string (e.g., "2024-07-28")
   location: string;
   description?: string;
   lanesPerEvent?: number; // Number of lanes for this event (e.g., 4, 6, 8)
-  order?: number; // Optional: for custom ordering of events
   categorySystem?: 'KU' | 'LETTER' | 'GRADE';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
+  createdByAdminId: string; // ID of the admin who created the event
+  authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event
 }
-export type NewSwimEvent = Omit<SwimEvent, 'id' | 'clubId'>;
+export type NewSwimEvent = Omit<SwimEvent, 'id' | 'createdByAdminId'>;
 
 // --- User Authentication and Roles ---
 export type UserRole = 'superadmin' | 'admin' | 'user';
 
+// Represents a user account in the system.
 export interface User {
   id: string;
-  clubId: string | null; // Can be null for superadmin
   username: string;
-  password?: string; // Should be hashed in a real backend.
+  password?: string; // Should not be sent to client
   role: UserRole;
-  clubName?: string; // Joined data for display
+  // If role is 'user', this is the club's name. Otherwise null.
+  clubName: string | null; 
 }
-export interface NewUser {
+
+// For creating new users via the form.
+export interface NewUserPayload {
   username: string;
   password: string;
   role: UserRole;
+  clubName?: string; // Only required if role is 'user'
 }
 
-// Payload for Super Admin creating users
-export interface AdminNewUserPayload extends NewUser {
-  // When role is 'admin' or 'user', one of these is needed.
-  clubId?: string;
-  newClubName?: string;
-}
-
-
+// The user object available in the AuthContext after login.
 export interface CurrentUser {
   id: string;
-  clubId: string | null; // Can be null for superadmin
-  clubName: string;
   username: string;
   role: UserRole;
+  clubId: string | null; // Added to match JWT payload
+  // Display name for the user. e.g., "Dolphins SC", "Event Organizer", "System Administration"
+  clubName: string; 
 }
 
 export interface CurrentUserContextType {
@@ -73,27 +66,23 @@ export interface CurrentUserContextType {
   isLoadingAuth: boolean;
   login: (username: string, password_plaintext: string) => Promise<void>;
   logout: () => void;
-  // createUser and getAllUsers are now more complex and handled in the page
-  // The backend will enforce role permissions.
 }
 // --- End User Authentication ---
 
 
 export interface Swimmer {
   id: string;
-  clubId: string; // Multi-tenancy key
   name: string;
   dob: string; // ISO date string (e.g., "1998-03-15")
   gender: 'Male' | 'Female' | 'Other';
-  club: string; 
+  clubName: string; // The name of the club, denormalized for display
+  clubUserId: string; // The ID of the User (role 'user') that owns this swimmer
   gradeLevel?: string; // e.g., "TK A", "SD Kelas 1", "SMA Kelas XII"
-  createdByUserId?: string; // Tracks which user created this swimmer
 }
-export type NewSwimmer = Omit<Swimmer, 'id' | 'clubId'>;
+export type NewSwimmer = Omit<Swimmer, 'id' | 'clubUserId' | 'clubName'>;
 
 export interface SwimResult {
   id: string;
-  clubId: string; // Multi-tenancy key
   swimmerId: string;
   eventId: string;
   style: string; // e.g., 'Freestyle', 'Butterfly', 'Backstroke', 'Breaststroke'
@@ -102,9 +91,9 @@ export interface SwimResult {
   time?: string; // Optional: Official final time: e.g., "00:58.63" (MM:SS.ss)
   dateRecorded: string; // ISO date string
   remarks?: string; // Optional: For any notes on the result
-  createdByUserId?: string; // Tracks which user created this result
+  createdByUserId: string; // Tracks which user created this result
 }
-export type NewSwimResult = Omit<SwimResult, 'id' | 'clubId'>;
+export type NewSwimResult = Omit<SwimResult, 'id' | 'createdByUserId'>;
 
 // For select options
 export interface SelectOption {
@@ -125,7 +114,7 @@ export interface SeededSwimmerInfo {
   swimmerId: string;
   resultId: string; // ID of the original SwimResult, for updating
   name: string;
-  club: string; 
+  clubName: string; 
   seedTimeMs: number; 
   seedTimeStr: string; 
   finalTimeStr?: string; // To display current final time
@@ -153,7 +142,7 @@ export interface LaneSwimmerDetails extends SeededSwimmerInfo {
 // For Results Book
 export interface ResultEntry extends SwimResult {
   swimmerName: string;
-  swimmerClub: string;
+  swimmerClubName: string;
   rank?: number; 
   seedTimeStr?: string; 
 }
@@ -208,7 +197,7 @@ export interface ResultsBookPrintData {
 // --- Club Starting List Types ---
 export interface ClubStartingListInfo {
   swimmerName: string;
-  swimmerClub: string; // Ensure this is always populated for "All Clubs" view
+  swimmerClubName: string; // Ensure this is always populated for "All Clubs" view
   raceLabel: string; 
   heatNumber: number;
   laneNumber: number;

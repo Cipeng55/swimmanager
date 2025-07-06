@@ -14,7 +14,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        const query = authData.role === 'superadmin' ? {} : { clubId: authData.clubId };
+        let query: any = {};
+        if (authData.role === 'user' && authData.userId) {
+          query.clubUserId = authData.userId;
+        }
+        // Admins and Superadmins can see all swimmers
+        
         const swimmers = await collection.find(query).sort({ name: 1 }).toArray();
         const transformedSwimmers = swimmers.map(swimmer => {
           const { _id, ...rest } = swimmer;
@@ -24,10 +29,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       case 'POST': {
+        if (authData.role !== 'user') {
+          return res.status(403).json({ message: 'Forbidden: Only users of role "user" (clubs) can create swimmers.' });
+        }
+        if (!authData.userId || !authData.clubName) {
+            return res.status(400).json({ message: "Cannot create swimmer: user's club information is missing." });
+        }
+
         const newSwimmerData = { 
             ...req.body, 
-            clubId: authData.clubId,
-            createdByUserId: authData.userId 
+            clubUserId: authData.userId,
+            clubName: authData.clubName
         };
         const result = await collection.insertOne(newSwimmerData);
         const insertedSwimmer = { id: result.insertedId.toHexString(), ...newSwimmerData };

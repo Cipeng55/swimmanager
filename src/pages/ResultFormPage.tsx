@@ -115,7 +115,7 @@ const ResultFormPage: React.FC = () => {
         } else if (!isEditing) { 
           let defaultSwimmerId: string | undefined = undefined;
           if (currentUser?.role === 'user') {
-            const ownedSwimmers = swimmersData.filter(s => s.createdByUserId === currentUser.id);
+            const ownedSwimmers = swimmersData.filter(s => s.clubUserId === currentUser.id);
             if (ownedSwimmers.length > 0) defaultSwimmerId = ownedSwimmers[0].id;
           } else if (swimmersData.length > 0) {
              defaultSwimmerId = swimmersData[0].id;
@@ -184,7 +184,7 @@ const ResultFormPage: React.FC = () => {
   const swimmerOptions: SelectOption[] = useMemo(() => {
     if (currentUser?.role === 'user') {
       return allSwimmers
-        .filter(s => s.createdByUserId === currentUser.id)
+        .filter(s => s.clubUserId === currentUser.id)
         .map(s => ({ value: s.id, label: s.name }));
     }
     return allSwimmers.map(s => ({ value: s.id, label: s.name }));

@@ -50,7 +50,7 @@ const PrintableEventProgram: React.FC = () => {
         const currentSwimmerAgeGroup = getAgeGroup(swimmer, event);
         if (currentSwimmerAgeGroup === race.ageGroup && timeToMilliseconds(r.seedTime!) >= 0) {
           raceSwimmersWithSeedTime.push({
-            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, club: swimmer.club, gender: swimmer.gender,
+            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
             ageGroup: currentSwimmerAgeGroup,
             seedTimeMs: timeToMilliseconds(r.seedTime!), seedTimeStr: r.seedTime!,
             finalTimeStr: r.time || undefined, remarks: r.remarks || undefined,
@@ -221,7 +221,7 @@ const PrintableEventProgram: React.FC = () => {
                           <td>{laneNumber}</td>
                           <td>{swimmer ? swimmer.name : ''}</td>
                           <td>{displayCategory}</td>
-                          <td>{swimmer ? swimmer.club : ''}</td>
+                          <td>{swimmer ? swimmer.clubName : ''}</td>
                           <td>{swimmer ? swimmer.seedTimeStr : ''}</td>
                           <td>{swimmer ? (swimmer.finalTimeStr || '-') : ''}</td>
                           <td>{swimmer ? (swimmer.remarks || '-') : ''}</td>

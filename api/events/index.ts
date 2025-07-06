@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authData = verifyToken(req);
@@ -14,10 +15,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        const query: { clubId?: string } = {};
-        if (authData.role !== 'superadmin' && authData.clubId) {
-            query.clubId = authData.clubId;
+        let query: any = {};
+        if (authData.role === 'admin') {
+            query.createdByAdminId = authData.userId;
+        } else if (authData.role === 'user') {
+            query.authorizedUserIds = authData.userId;
         }
+        // Superadmin gets all events (empty query)
+
         const events = await collection.find(query).sort({ date: -1 }).toArray();
         const transformedEvents = events.map(event => {
           const { _id, ...rest } = event;
@@ -30,10 +35,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (authData.role !== 'admin') {
             return res.status(403).json({ message: 'Forbidden: Only admins can create events.' });
         }
-        if (!authData.clubId) {
-            return res.status(400).json({ message: 'Admin account is not associated with a club.' });
+        if (!authData.userId) {
+             return res.status(400).json({ message: 'Authentication error: Admin user ID not found.' });
         }
-        const newEventData = { ...req.body, clubId: authData.clubId };
+        
+        const { authorizedUserIds, ...eventDetails } = req.body;
+        if (!Array.isArray(authorizedUserIds) || authorizedUserIds.length === 0) {
+            return res.status(400).json({ message: 'At least one club (user) must be authorized.' });
+        }
+
+        const newEventData = { 
+            ...eventDetails, 
+            createdByAdminId: authData.userId,
+            authorizedUserIds: authorizedUserIds 
+        };
         const result = await collection.insertOne(newEventData);
         const insertedEvent = { id: result.insertedId.toHexString(), ...newEventData };
         return res.status(201).json(insertedEvent);

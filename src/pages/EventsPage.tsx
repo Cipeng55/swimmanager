@@ -65,7 +65,11 @@ const EventsPage: React.FC = () => {
     return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
   }
 
-  const canManageEvents = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const canManageEvent = (event: SwimEvent) => {
+    if (!currentUser) return false;
+    return currentUser.role === 'superadmin' || (currentUser.role === 'admin' && event.createdByAdminId === currentUser.id);
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -73,7 +77,7 @@ const EventsPage: React.FC = () => {
         <div>
           <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Swim Events</h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Manage all upcoming and past swimming competitions for your club.
+            {currentUser?.role === 'user' ? "Browse competitions your club is authorized to join." : "Manage all swimming competitions."}
           </p>
         </div>
         {currentUser?.role === 'admin' && (
@@ -83,7 +87,7 @@ const EventsPage: React.FC = () => {
             aria-label="Add New Event"
           >
             <PlusCircleIcon className="h-5 w-5 mr-2" />
-            Add New Event
+            Create New Event
           </Link>
         )}
       </header>
@@ -95,7 +99,8 @@ const EventsPage: React.FC = () => {
         {events.length === 0 && !loading ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             <p className="mb-2 text-xl">No events found.</p>
-            {currentUser?.role === 'admin' && <p>Click "Add New Event" to get started.</p>}
+            {currentUser?.role === 'admin' && <p>Click "Create New Event" to get started.</p>}
+            {currentUser?.role === 'user' && <p>Your club has not been authorized for any events yet. Contact an event organizer.</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -134,7 +139,7 @@ const EventsPage: React.FC = () => {
                       >
                         <TrophyIcon className="h-5 w-5" />
                       </button>
-                      {canManageEvents && (
+                      {canManageEvent(event) && (
                         <>
                           <button
                             onClick={() => navigate(`/events/edit/${event.id}`)}
@@ -163,7 +168,7 @@ const EventsPage: React.FC = () => {
         )}
       </section>
 
-      {canManageEvents && (
+      
         <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirm Deletion">
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Are you sure you want to delete the event "{eventToDelete?.name}"? This action cannot be undone. All associated results and program orders will also be deleted.
@@ -185,7 +190,7 @@ const EventsPage: React.FC = () => {
             </button>
           </div>
         </Modal>
-      )}
+      
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SwimEvent, Swimmer, SelectOption, RaceDefinition, SeededSwimmerInfo, Heat, ClubStartingListInfo, ClubRaceInfo, ClubStartingListPrintData, SwimResult } from '../types';
-import { getEvents, getSwimmers, getResults, getEventProgramOrder } from '../services/api';
+import { SwimEvent, Swimmer, SelectOption, RaceDefinition, SeededSwimmerInfo, ClubStartingListInfo, ClubRaceInfo, ClubStartingListPrintData, SwimResult, User } from '../types';
+import { getEvents, getSwimmers, getResults, getEventProgramOrder, getAllUsers } from '../services/api';
 import { generateHeats } from '../utils/seedingUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../utils/ageUtils';
 import { timeToMilliseconds } from '../utils/timeUtils';
@@ -33,8 +33,9 @@ const ClubStartingListPage: React.FC = () => {
     const [events, setEvents] = useState<SwimEvent[]>([]);
     const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
     const [results, setResults] = useState<SwimResult[]>([]);
+    const [allClubs, setAllClubs] = useState<User[]>([]); // User with role 'user'
     const [selectedEventId, setSelectedEventId] = useState<string>('');
-    const [selectedClub, setSelectedClub] = useState<string>('');
+    const [selectedClubUserId, setSelectedClubUserId] = useState<string>('');
     const [startingList, setStartingList] = useState<ClubRaceInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -47,15 +48,20 @@ const ClubStartingListPage: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                const [eventsData, swimmersData, resultsData] = await Promise.all([getEvents(), getSwimmers(), getResults()]);
+                const [eventsData, swimmersData, resultsData, usersData] = await Promise.all([getEvents(), getSwimmers(), getResults(), getAllUsers()]);
                 setEvents(eventsData);
                 setSwimmers(swimmersData);
                 setResults(resultsData);
+                
+                const clubs = usersData.filter(u => u.role === 'user');
+                setAllClubs(clubs);
+
                 if (eventsData.length > 0) {
                     setSelectedEventId(eventsData[0].id.toString());
                 }
-                if (currentUser?.role !== 'superadmin' && currentUser?.clubName) {
-                    setSelectedClub(currentUser.clubName);
+                // For a user (club), automatically select their own club.
+                if (currentUser?.role === 'user') {
+                    setSelectedClubUserId(currentUser.id);
                 }
             } catch (err: any) {
                 setError(err.message || 'Failed to load initial data.');
@@ -70,24 +76,18 @@ const ClubStartingListPage: React.FC = () => {
     
     const clubOptions = useMemo(() => {
         if (!currentUser) return [];
-
-        const allClubs = [...new Set(swimmers.map(s => s.club))].sort();
         
-        if (currentUser.role === 'superadmin') {
-            const options: SelectOption[] = allClubs.map((c: string) => ({ value: c, label: c }));
-            options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs (Admin)' });
-            return options;
-        }
+        const options: SelectOption[] = allClubs.map(c => ({ value: c.id, label: c.clubName! }));
 
-        if (currentUser.clubName) {
-            return [{ value: currentUser.clubName, label: currentUser.clubName }];
+        if (currentUser.role === 'superadmin' || currentUser.role === 'admin') {
+            options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs' });
         }
         
-        return [];
-    }, [swimmers, currentUser]);
+        return options;
+    }, [allClubs, currentUser]);
 
     useEffect(() => {
-        if (!selectedEventId || !selectedClub) {
+        if (!selectedEventId || !selectedClubUserId) {
             setStartingList([]);
             return;
         }
@@ -98,6 +98,9 @@ const ClubStartingListPage: React.FC = () => {
             try {
                 const eventDetails = events.find(e => e.id === selectedEventId);
                 if (!eventDetails) throw new Error("Selected event not found.");
+
+                const selectedClub = allClubs.find(c => c.id === selectedClubUserId);
+                const selectedClubName = selectedClub ? selectedClub.clubName : 'ALL_CLUBS';
 
                 const eventResults = results.filter(r => r.eventId === selectedEventId);
                 
@@ -141,7 +144,7 @@ const ClubStartingListPage: React.FC = () => {
                            const currentSwimmerAgeGroup = getAgeGroup(swimmer, eventDetails);
                            if (currentSwimmerAgeGroup === raceDef.ageGroup && timeToMilliseconds(r.seedTime) >= 0) {
                                 raceSwimmersWithSeedTime.push({
-                                    resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, club: swimmer.club, gender: swimmer.gender,
+                                    resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
                                     ageGroup: currentSwimmerAgeGroup, seedTimeMs: timeToMilliseconds(r.seedTime), seedTimeStr: r.seedTime,
                                     swimmerDob: swimmer.dob, swimmerGradeLevel: swimmer.gradeLevel,
                                 });
@@ -155,10 +158,10 @@ const ClubStartingListPage: React.FC = () => {
 
                     heats.forEach(heat => {
                         heat.lanes.forEach(lane => {
-                            if (lane.swimmer && (selectedClub === 'ALL_CLUBS' || lane.swimmer.club === selectedClub)) {
+                            if (lane.swimmer && (selectedClubUserId === 'ALL_CLUBS' || lane.swimmer.clubName === selectedClubName)) {
                                 clubSwimmersInThisRace.push({
                                     swimmerName: lane.swimmer.name,
-                                    swimmerClub: lane.swimmer.club,
+                                    swimmerClubName: lane.swimmer.clubName,
                                     raceLabel: raceLabelWithAcara,
                                     heatNumber: heat.heatNumber,
                                     laneNumber: lane.lane,
@@ -192,21 +195,25 @@ const ClubStartingListPage: React.FC = () => {
         };
 
         generateStartingList();
-    }, [selectedEventId, selectedClub, events, swimmers, results, getEventProgramOrder]);
+    }, [selectedEventId, selectedClubUserId, events, swimmers, results, allClubs]);
 
     const handlePrint = () => {
-        if (!selectedEventId || !selectedClub || !events.length) return;
+        if (!selectedEventId || !selectedClubUserId || !events.length) return;
         const event = events.find(e => e.id === selectedEventId);
         if (!event) return;
 
+        const selectedClub = allClubs.find(c => c.id === selectedClubUserId);
+        const clubNameToDisplay = selectedClubUserId === 'ALL_CLUBS' ? 'All Clubs' : selectedClub?.clubName || '';
+
         const printData: ClubStartingListPrintData = {
             event: event,
-            clubNameToDisplay: selectedClub === 'ALL_CLUBS' ? 'All Clubs (Admin View)' : selectedClub,
+            clubNameToDisplay: clubNameToDisplay,
             startingList: startingList,
             lanesPerEvent: event.lanesPerEvent || 8,
-            isAdminAllClubsView: selectedClub === 'ALL_CLUBS'
+            isAdminAllClubsView: selectedClubUserId === 'ALL_CLUBS'
         };
-        navigate(`/events/${selectedEventId}/club-starting-list/print?club=${encodeURIComponent(selectedClub)}`, { state: { printData } });
+        const clubParam = selectedClubUserId === 'ALL_CLUBS' ? 'ALL_CLUBS' : clubNameToDisplay;
+        navigate(`/events/${selectedEventId}/club-starting-list/print?club=${encodeURIComponent(clubParam)}`, { state: { printData } });
     };
 
     return (
@@ -219,8 +226,8 @@ const ClubStartingListPage: React.FC = () => {
             <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl mb-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <FormField label="Select Event" id="event-select" name="event-select" type="select" options={eventOptions} value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)} containerClassName="mb-0" />
-                    <FormField label="Select Club" id="club-select" name="club-select" type="select" options={clubOptions} value={selectedClub} onChange={e => setSelectedClub(e.target.value)} containerClassName="mb-0" disabled={currentUser?.role !== 'superadmin'} />
-                    <button onClick={handlePrint} disabled={!selectedEventId || !selectedClub || startingList.length === 0} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <FormField label="Select Club" id="club-select" name="club-select" type="select" options={clubOptions} value={selectedClubUserId} onChange={e => setSelectedClubUserId(e.target.value)} containerClassName="mb-0" disabled={currentUser?.role === 'user'} />
+                    <button onClick={handlePrint} disabled={!selectedEventId || !selectedClubUserId || startingList.length === 0} className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                         <PrinterIcon className="h-5 w-5 mr-2" />
                         Print List
                     </button>
@@ -230,7 +237,7 @@ const ClubStartingListPage: React.FC = () => {
             {loading && <LoadingSpinner text="Generating starting list..." />}
             {error && <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>}
             
-            {!loading && !error && selectedEventId && selectedClub && (
+            {!loading && !error && selectedEventId && selectedClubUserId && (
                 startingList.length > 0 ? (
                     <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
                         {startingList.map((clubRace, index) => (
@@ -241,7 +248,7 @@ const ClubStartingListPage: React.FC = () => {
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
                                                 <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Swimmer</th>
-                                                {selectedClub === 'ALL_CLUBS' && <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Club</th>}
+                                                {selectedClubUserId === 'ALL_CLUBS' && <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Club</th>}
                                                 <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Heat</th>
                                                 <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Lane</th>
                                                 <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-300">Seed Time</th>
@@ -251,7 +258,7 @@ const ClubStartingListPage: React.FC = () => {
                                             {clubRace.swimmers.map((swimmerEntry, sIdx) => (
                                                 <tr key={`${swimmerEntry.swimmerName}-${sIdx}`} className="hover:bg-gray-50 dark:hover:bg-gray-600">
                                                     <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.swimmerName}</td>
-                                                    {selectedClub === 'ALL_CLUBS' && <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.swimmerClub}</td>}
+                                                    {selectedClubUserId === 'ALL_CLUBS' && <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.swimmerClubName}</td>}
                                                     <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.heatNumber}</td>
                                                     <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.laneNumber}</td>
                                                     <td className="px-4 py-2 whitespace-nowrap">{swimmerEntry.seedTime}</td>
@@ -265,7 +272,7 @@ const ClubStartingListPage: React.FC = () => {
                     </section>
                 ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                        <p className="text-xl">No entries found for {selectedClub === 'ALL_CLUBS' ? 'any club' : selectedClub} in this event.</p>
+                        <p className="text-xl">No entries found for the selected club in this event.</p>
                     </div>
                 )
             )}

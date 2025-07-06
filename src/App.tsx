@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -69,26 +70,30 @@ const App: React.FC = () => {
         <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin', 'user']} />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
+          <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
+          <Route path="/results" element={<ResultsPage />} />
+          <Route path="/club-starting-list" element={<ClubStartingListPage />} /> 
+        </Route>
+        
+        {/* User (Club) Only Routes for Swimmers and Results */}
+        <Route element={<PrivateRoute allowedRoles={['user']} />}>
           <Route path="/swimmers" element={<SwimmersPage />} />
           <Route path="/swimmers/add" element={<SwimmerFormPage />} /> 
           <Route path="/swimmers/edit/:swimmerId" element={<SwimmerFormPage />} />
-          <Route path="/results" element={<ResultsPage />} />
           <Route path="/results/add" element={<ResultFormPage />} />
           <Route path="/results/edit/:resultId" element={<ResultFormPage />} />
-          <Route path="/club-starting-list" element={<ClubStartingListPage />} /> 
         </Route>
 
-        {/* Admin and Super Admin Only Routes for Events */}
-        <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin']} />}>
+        {/* Admin (Event Organizer) Only Routes */}
+        <Route element={<PrivateRoute allowedRoles={['admin']} />}>
           <Route path="/events/add" element={<EventFormPage />} />
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
-          <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
-          <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
         </Route>
 
-        {/* Superadmin Only Routes */}
+        {/* Super Admin Only Routes */}
         <Route element={<PrivateRoute allowedRoles={['superadmin']} />}>
-            <Route path="/users/manage" element={<UserManagementPage />} />
+          <Route path="/users/manage" element={<UserManagementPage />} />
         </Route>
         
         <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/login"} replace />} />

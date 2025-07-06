@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link, Navigate } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { NewSwimmer, Swimmer, SelectOption } from '../types';
 import { addSwimmer, getSwimmerById, updateSwimmer } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -40,11 +40,11 @@ const SwimmerFormPage: React.FC = () => {
   const isEditing = Boolean(swimmerId);
   const { currentUser } = useAuth(); 
 
-  const [swimmerData, setSwimmerData] = useState<Partial<NewSwimmer | Swimmer>>({
+  const [swimmerData, setSwimmerData] = useState<Partial<Swimmer>>({
     name: '',
     dob: '',
     gender: 'Other', 
-    club: '',
+    clubName: currentUser?.clubName || '',
     gradeLevel: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -59,7 +59,7 @@ const SwimmerFormPage: React.FC = () => {
         .then(swimmer => {
           if (swimmer) {
             const canEdit = currentUser?.role === 'superadmin' || 
-                            ((currentUser?.role === 'user' || currentUser?.role === 'admin') && swimmer.clubId === currentUser.clubId);
+                            (currentUser?.role === 'user' && swimmer.clubUserId === currentUser.id);
 
             if (!canEdit) {
               setError('You are not authorized to edit this swimmer.');
@@ -83,6 +83,9 @@ const SwimmerFormPage: React.FC = () => {
           setError('Failed to load swimmer data.');
         })
         .finally(() => setLoading(false));
+    } else {
+        // For new swimmers, ensure clubName is set from the logged-in user
+        setSwimmerData(prev => ({ ...prev, clubName: currentUser?.clubName || '' }));
     }
   }, [swimmerId, isEditing, currentUser]);
 
@@ -90,10 +93,8 @@ const SwimmerFormPage: React.FC = () => {
     const errors: Partial<Record<keyof NewSwimmer, string>> = {};
     if (!swimmerData.name?.trim()) errors.name = 'Swimmer name is required.';
     if (!swimmerData.dob) errors.dob = 'Date of birth is required.';
-    else { /* existing DOB validation could be added here if needed */ }
     if (!swimmerData.gender) errors.gender = 'Gender is required.';
-    if (!swimmerData.club?.trim()) errors.club = 'Club name is required.';
-    // gradeLevel is optional, so no validation here unless rules change
+    // Club name is now auto-filled, so no validation needed
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -123,7 +124,6 @@ const SwimmerFormPage: React.FC = () => {
         name: swimmerData.name!,
         dob: new Date(swimmerData.dob!).toISOString().split('T')[0], 
         gender: swimmerData.gender!,
-        club: swimmerData.club!,
         gradeLevel: swimmerData.gradeLevel?.trim() || undefined, // Send undefined if empty
       };
 
@@ -196,14 +196,13 @@ const SwimmerFormPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
             label="Club Affiliation"
-            id="club"
-            name="club"
+            id="clubName"
+            name="clubName"
             type="text"
-            value={swimmerData.club || ''}
-            onChange={handleChange}
-            error={formErrors.club}
+            value={swimmerData.clubName || ''}
+            onChange={() => {}} // No-op change handler
             required
-            disabled={loading || isUnauthorized}
+            disabled // Always disabled
             />
             <FormField
             label="Grade Level (School)"

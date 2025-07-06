@@ -95,7 +95,7 @@ const EditLaneResultModal: React.FC<EditLaneResultModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title={modalTitle}>
       <div className="space-y-4">
         <p className="text-sm text-gray-600 dark:text-gray-300">
-            Lane: {swimmerData.lane} | Club: {swimmerData.club} | Seed: {swimmerData.seedTimeStr}
+            Lane: {swimmerData.lane} | Club: {swimmerData.clubName} | Seed: {swimmerData.seedTimeStr}
         </p>
         <FormField
           label="Keterangan (Remarks)"

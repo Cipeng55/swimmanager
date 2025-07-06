@@ -169,7 +169,7 @@ const EventProgramPage: React.FC = () => {
         const currentSwimmerAgeGroup = getAgeGroup(swimmer, event); // Pass full swimmer
         if (currentSwimmerAgeGroup === race.ageGroup && timeToMilliseconds(r.seedTime!) >= 0 ) {
           raceSwimmersWithSeedTime.push({
-            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, club: swimmer.club, gender: swimmer.gender,
+            resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
             ageGroup: currentSwimmerAgeGroup, 
             seedTimeMs: timeToMilliseconds(r.seedTime!), seedTimeStr: r.seedTime!,
             finalTimeStr: r.time || undefined, remarks: r.remarks || undefined,
@@ -197,6 +197,7 @@ const EventProgramPage: React.FC = () => {
     })).filter(rwh => rwh.heats.length > 0);
   }, [event, numberedUniqueRaces, getHeatsForRace]);
 
+  const canManageEvent = currentUser?.role === 'superadmin' || (currentUser?.role === 'admin' && event?.createdByAdminId === currentUser.id);
 
   const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => { return gender === 'Male' ? 'PUTRA' : 'PUTRI'; };
 
@@ -212,7 +213,7 @@ const EventProgramPage: React.FC = () => {
   };
 
   const handleOpenEditLaneModal = (swimmerInfo: SeededSwimmerInfo, laneNumber: number) => {
-    if (currentUser?.role !== 'admin') return; 
+    if (!canManageEvent) return; 
     setEditingLaneSwimmerData({ ...swimmerInfo, lane: laneNumber });
     setIsEditLaneModalOpen(true);
   };
@@ -302,7 +303,7 @@ const EventProgramPage: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-left">
                 ACARA {race.acaraNumber} - {race.distance}M {race.style.toUpperCase()} - {race.ageGroup.toUpperCase()} {genderDisplay(race.gender)} - SCM
               </h2>
-              {currentUser?.role === 'admin' && (
+              {canManageEvent && (
                 <div className="flex space-x-1">
                   <button
                     onClick={() => handleMoveRace(raceKey, 'up')}
@@ -326,15 +327,15 @@ const EventProgramPage: React.FC = () => {
             <HeatSheetDisplay 
               race={race} 
               heats={heats} 
-              onEditLane={currentUser?.role === 'admin' ? handleOpenEditLaneModal : () => {}}
-              showEditButton={currentUser?.role === 'admin'}
+              onEditLane={canManageEvent ? handleOpenEditLaneModal : () => {}}
+              showEditButton={canManageEvent}
               isGradeSystem={event?.categorySystem === 'GRADE'}
             />
           </section>
         );
       })}
 
-      {currentUser?.role === 'admin' && editingLaneSwimmerData && (
+      {canManageEvent && editingLaneSwimmerData && (
         <EditLaneResultModal
           isOpen={isEditLaneModalOpen}
           onClose={handleCloseEditLaneModal}

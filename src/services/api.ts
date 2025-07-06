@@ -3,7 +3,7 @@
  * serverless functions.
  */
 
-import { SwimEvent, NewSwimEvent, Swimmer, NewSwimmer, SwimResult, NewSwimResult, User, NewUser, AdminNewUserPayload, Club } from '../types';
+import { SwimEvent, NewSwimEvent, Swimmer, NewSwimmer, SwimResult, NewSwimResult, User, NewUserPayload } from '../types';
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
@@ -115,20 +115,12 @@ export const saveEventProgramOrder = (eventId: string, orderedRaceKeys: string[]
     body: JSON.stringify({ orderedRaceKeys }),
   });
 
-// --- Users & Clubs API ---
+// --- Users API ---
 export const getAllUsers = (): Promise<User[]> => apiFetch('/api/users');
 
-export const createUser = (userData: NewUser | AdminNewUserPayload): Promise<User> => {
+export const createUser = (userData: NewUserPayload): Promise<User> => {
     return apiFetch('/api/users', {
         method: 'POST',
         body: JSON.stringify(userData),
     });
 };
-
-export const getClubs = (): Promise<Club[]> => apiFetch('/api/clubs');
-
-export const createClub = (clubData: { name: string }): Promise<Club> => 
-    apiFetch('/api/clubs', {
-        method: 'POST',
-        body: JSON.stringify(clubData),
-    });

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { RaceResults, ResultEntry } from '../types';
 
@@ -33,7 +32,7 @@ const ResultsBookDisplay: React.FC<ResultsBookDisplayProps> = ({ raceResults, is
                 {result.rank !== undefined ? result.rank : (result.remarks || '-')}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">{result.swimmerName}</td>
-              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.swimmerClub}</td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.swimmerClubName}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.seedTimeStr || '-'}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {result.time && result.time !== "99:99.99" ? result.time : (result.remarks ? '' : '-')}

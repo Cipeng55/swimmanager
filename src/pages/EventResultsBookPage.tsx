@@ -33,7 +33,7 @@ const EventResultsBookPage: React.FC = () => {
       const ageGroup = getAgeGroup(swimmer, event);
       if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
       
-      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClub: swimmer.club, seedTimeStr: result.seedTime || undefined };
+      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, seedTimeStr: result.seedTime || undefined };
       const raceKey = `${result.style}-${result.distance}-${swimmer.gender}-${ageGroup}`;
       if (!groupedByRace.has(raceKey)) groupedByRace.set(raceKey, []);
       groupedByRace.get(raceKey)!.push(entry);

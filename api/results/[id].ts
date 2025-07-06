@@ -18,35 +18,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const objectId = new ObjectId(id);
   const collection = db.collection('results');
 
-  const query = authData.role === 'superadmin' 
-    ? { _id: objectId }
-    : { _id: objectId, clubId: authData.clubId };
-  
   try {
+    const result = await collection.findOne({ _id: objectId });
+    if (!result) {
+        return res.status(404).json({ message: 'Result not found' });
+    }
+
+    const swimmer = await db.collection('swimmers').findOne({ _id: new ObjectId(result.swimmerId) });
+    if (!swimmer) {
+        return res.status(404).json({ message: 'Associated swimmer not found for this result.' });
+    }
+
+    // Permission check
+    const isSuperAdmin = authData.role === 'superadmin';
+    const isOwnerUser = authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId;
+    // For now, allow any admin/user to GET if they pass initial auth, can be tightened later if needed.
+    
     switch (req.method) {
       case 'GET': {
-        const result = await collection.findOne(query);
-        if (!result) {
-          return res.status(404).json({ message: 'Result not found or not part of your club' });
-        }
         const { _id, ...resultData } = result;
         return res.status(200).json({ id: _id.toHexString(), ...resultData });
       }
 
       case 'PUT': {
-        const existingResult = await collection.findOne(query);
-        if (!existingResult) {
-            return res.status(404).json({ message: 'Result not found or not part of your club' });
-        }
-        
-        if (authData.role !== 'superadmin' && existingResult.createdByUserId !== authData.userId) {
+        if (!isSuperAdmin && !isOwnerUser) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this result.' });
         }
         
         const resultData = req.body;
-        delete resultData.clubId; // Prevent changing clubId
-
-        const updateResult = await collection.updateOne(query, { $set: resultData });
+        const updateResult = await collection.updateOne({ _id: objectId }, { $set: resultData });
         if (updateResult.matchedCount === 0) {
           return res.status(404).json({ message: 'Result not found during update' });
         }
@@ -54,16 +54,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        const existingResult = await collection.findOne(query);
-        if (!existingResult) {
-            return res.status(404).json({ message: 'Result not found or not part of your club' });
-        }
-
-        if (authData.role !== 'superadmin' && existingResult.createdByUserId !== authData.userId) {
+        if (!isSuperAdmin && !isOwnerUser) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this result.' });
         }
 
-        const deleteResult = await collection.deleteOne(query);
+        const deleteResult = await collection.deleteOne({ _id: objectId });
         if (deleteResult.deletedCount === 0) {
           return res.status(404).json({ message: 'Result not found during deletion' });
         }

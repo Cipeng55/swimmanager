@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { RaceDefinition, Heat, SeededSwimmerInfo } from '../types';
 import { EditIcon } from './icons/EditIcon';
@@ -60,7 +59,7 @@ const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEdit
                       {getAgeOrGradeValue(swimmer)}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
-                      {swimmer ? swimmer.club : ''}
+                      {swimmer ? swimmer.clubName : ''}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
                       {swimmer ? swimmer.seedTimeStr : ''}

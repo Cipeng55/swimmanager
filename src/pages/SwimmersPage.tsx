@@ -70,6 +70,12 @@ const SwimmersPage: React.FC = () => {
     fileContent: string,
     updateFeedback: (feedback: Partial<ImportFeedback>) => void
   ): Promise<void> => {
+    // This requires the user (club) to have a clubName in their profile
+    if (!currentUser?.clubName) {
+      updateFeedback({ generalError: "Cannot import: Your account is not associated with a club name.", status: 'error' });
+      return;
+    }
+
     let parsedData: ParsedSwimmerRow[] = [];
     try {
       parsedData = parseSwimmerCsv(fileContent);
@@ -94,11 +100,10 @@ const SwimmersPage: React.FC = () => {
       const name = row.Name?.trim();
       const dob = row.DOB?.trim();
       const genderInput = row.Gender?.trim();
-      const club = row.Club?.trim();
       const gradeLevel = row.GradeLevel?.trim() || undefined; // Get gradeLevel
 
       if (!name) rowErrors.push('Name is missing.');
-      if (!dob) { // Basic DOB validation
+      if (!dob) {
           rowErrors.push('DOB is missing.');
       } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || isNaN(new Date(dob).getTime())) {
           rowErrors.push('DOB format is invalid (must be YYYY-MM-DD).');
@@ -113,7 +118,8 @@ const SwimmersPage: React.FC = () => {
         else if (lowerGender === 'other') validGender = 'Other';
         else rowErrors.push("Gender must be 'Male', 'Female', or 'Other'.");
       }
-      if (!club) rowErrors.push('Club is missing.');
+      
+      // Club name from CSV is now ignored, we use the logged-in user's club name.
 
       if (rowErrors.length > 0) {
         currentRowErrors.push({ rowNumber: originalRowNumber, rowData: Object.values(row).join(','), errors: rowErrors });
@@ -123,8 +129,7 @@ const SwimmersPage: React.FC = () => {
             name: name!, 
             dob: dob!, 
             gender: validGender!, 
-            club: club!,
-            gradeLevel: gradeLevel, // Add gradeLevel to payload
+            gradeLevel: gradeLevel, 
           };
           await addSwimmer(newSwimmerData);
           currentSuccessCount++;
@@ -138,7 +143,14 @@ const SwimmersPage: React.FC = () => {
     if (currentSuccessCount > 0) fetchSwimmersData();
   };
 
-  const canManageSwimmers = currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const canManageSwimmers = currentUser?.role === 'user';
+  
+  const canManageSwimmerRecord = (swimmer: Swimmer): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'superadmin') return true;
+    if (currentUser.role === 'user' && swimmer.clubUserId === currentUser.id) return true;
+    return false;
+  };
 
   if (loading && !isImportModalOpen) {
     return <LoadingSpinner text="Loading swimmers..." />;
@@ -146,20 +158,13 @@ const SwimmersPage: React.FC = () => {
   if (error && swimmers.length === 0 && !isImportModalOpen) {
     return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
   }
-  
-  const canManageSwimmerRecord = (swimmer: Swimmer): boolean => {
-    if (!currentUser) return false;
-    if (currentUser.role === 'superadmin') return true;
-    if ((currentUser.role === 'user' || currentUser.role === 'admin') && swimmer.clubId === currentUser.clubId) return true;
-    return false;
-  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center">
         <div className='mb-4 sm:mb-0'>
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Registered Swimmers</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">View and manage swimmer profiles.</p>
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">My Club's Swimmers</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">View and manage your swimmer profiles.</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 self-start sm:self-auto">
             {canManageSwimmers && (
@@ -213,7 +218,7 @@ const SwimmersPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{swimmer.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{getDisplayAge(swimmer.dob)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gender}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.club}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.clubName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gradeLevel || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
                       {canManageSwimmerRecord(swimmer) ? (

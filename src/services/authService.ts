@@ -1,10 +1,9 @@
-
 /**
  * @file This file provides an authentication service using JWT
  * and a backend API for user verification and management.
  */
 
-import { User, NewUser, CurrentUser } from '../types';
+import { User, CurrentUser } from '../types';
 import { jwtDecode } from 'jwt-decode'; // Using a community-standard library
 
 const AUTH_TOKEN_KEY = 'swim_manager_auth_token';

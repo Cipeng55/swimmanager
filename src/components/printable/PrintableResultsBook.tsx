@@ -30,7 +30,7 @@ const PrintableResultsBook: React.FC = () => {
       if (!swimmer || !swimmer.dob) return;
       const ageGroup = getAgeGroup(swimmer, event);
       if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
-      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClub: swimmer.club, seedTimeStr: result.seedTime || undefined };
+      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, seedTimeStr: result.seedTime || undefined };
       const raceKey = `${result.style}-${result.distance}-${swimmer.gender}-${ageGroup}`;
       if (!groupedByRace.has(raceKey)) groupedByRace.set(raceKey, []);
       groupedByRace.get(raceKey)!.push(entry);
@@ -181,7 +181,7 @@ const PrintableResultsBook: React.FC = () => {
                   <tr key={result.id}>
                     <td>{result.rank !== undefined ? result.rank : (result.remarks || '-')}</td>
                     <td>{result.swimmerName}</td>
-                    <td>{result.swimmerClub}</td>
+                    <td>{result.swimmerClubName}</td>
                     <td>{result.seedTimeStr || '-'}</td>
                     <td style={{ fontWeight: 'bold' }}>{result.time && result.time !== "99:99.99" ? result.time : (result.remarks ? '' : '-')}</td>
                     <td>{result.remarks || '-'}</td>

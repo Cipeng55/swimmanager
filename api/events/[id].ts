@@ -25,11 +25,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(404).json({ message: 'Event not found' });
   }
 
-  // Permission check: superadmin can access anything. Other roles must match clubId.
-  if (authData.role !== 'superadmin' && event.clubId?.toString() !== authData.clubId) {
-      return res.status(403).json({ message: 'Forbidden: You do not have permission to access this event.' });
-  }
+  // Permission check
+  const isSuperAdmin = authData.role === 'superadmin';
+  const isAdminCreator = authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId;
+  const isAuthorizedUser = authData.role === 'user' && event.authorizedUserIds?.includes(authData.userId);
 
+  if (!isSuperAdmin && !isAdminCreator && !isAuthorizedUser) {
+    return res.status(403).json({ message: 'Forbidden: You do not have permission to access this event.' });
+  }
 
   try {
     switch (req.method) {
@@ -39,11 +42,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'PUT': {
-        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
-          return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can update events.' });
+        if (!isSuperAdmin && !isAdminCreator) {
+          return res.status(403).json({ message: 'Forbidden: Only the creating admin or superadmin can update events.' });
         }
         const eventData = req.body;
-        delete eventData.clubId;
+        delete eventData.createdByAdminId; // Cannot change creator
+        
         const result = await eventsCollection.updateOne({ _id: objectId }, { $set: eventData });
         if (result.matchedCount === 0) {
           return res.status(404).json({ message: 'Event not found during update' });
@@ -52,8 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
-          return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can delete events.' });
+        if (!isSuperAdmin && !isAdminCreator) {
+          return res.status(403).json({ message: 'Forbidden: Only the creating admin or superadmin can delete events.' });
         }
         
         await resultsCollection.deleteMany({ eventId: id });
