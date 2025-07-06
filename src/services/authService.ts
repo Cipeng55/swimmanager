@@ -1,3 +1,4 @@
+
 /**
  * @file This file provides an authentication service using JWT
  * and a backend API for user verification and management.
@@ -44,7 +45,7 @@ const decodeToken = (token: string): CurrentUser | null => {
 
 
 export const login = async (username: string, password_plaintext: string): Promise<CurrentUser> => {
-    const { token } = await apiFetch('/api/auth/login', {
+    const { token } = await apiFetch('/api/auth?action=login', {
         method: 'POST',
         body: JSON.stringify({ username, password: password_plaintext }),
     });
