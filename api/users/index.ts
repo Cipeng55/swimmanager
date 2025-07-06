@@ -63,20 +63,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to create users.' });
         }
 
-        const { username, password, role, clubId } = req.body;
+        const { username, password } = req.body;
         if (!username || !password) {
           return res.status(400).json({ message: 'Username and password are required.' });
         }
-        
-        const newUserRole = authData.role === 'superadmin' ? role : 'user';
-        if (authData.role === 'admin' && role && role !== 'user') {
-            return res.status(403).json({ message: 'Admins can only create Users.' });
-        }
-        if (authData.role === 'superadmin' && (!role || !clubId)) {
-            return res.status(400).json({ message: 'Super admins must specify a role and club.' });
-        }
-
-        const newUserClubId = authData.role === 'superadmin' ? new ObjectId(clubId) : new ObjectId(authData.clubId);
 
         const existingUser = await usersCollection.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
         if (existingUser) {
@@ -84,16 +74,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = {
-          username,
-          password: hashedPassword,
-          role: newUserRole,
-          clubId: newUserClubId,
-        };
+        let newUserDocument;
 
-        const result = await usersCollection.insertOne(newUser);
-        const { password: _, ...userToReturn } = newUser;
-        return res.status(201).json({ id: result.insertedId.toHexString(), ...userToReturn, clubId: newUserClubId.toHexString() });
+        if (authData.role === 'superadmin') {
+            // Superadmin creates a user with 'user' role and no club affiliation yet.
+            newUserDocument = {
+              username,
+              password: hashedPassword,
+              role: 'user', // Default role
+              clubId: null, // No club assigned on creation by superadmin
+            };
+        } else { // Admin role
+            // Admin creates a user within their own club.
+            newUserDocument = {
+              username,
+              password: hashedPassword,
+              role: 'user',
+              clubId: new ObjectId(authData.clubId),
+            };
+        }
+
+        const result = await usersCollection.insertOne(newUserDocument);
+        const { password: _, ...userToReturn } = newUserDocument;
+
+        // Ensure clubId is stringified for the response if it exists
+        if (userToReturn.clubId) {
+            // @ts-ignore
+            userToReturn.clubId = userToReturn.clubId.toHexString();
+        }
+
+        return res.status(201).json({ id: result.insertedId.toHexString(), ...userToReturn });
       }
 
       default:
