@@ -1,48 +1,29 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectToDatabase } from './_lib/mongodb';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-async function handleLogin(req: VercelRequest, res: VercelResponse) {
-    if (!JWT_SECRET) {
-      return res.status(500).json({ message: 'Internal server configuration error: JWT_SECRET not set.' });
-    }
-    
+/**
+ * Handles login for regular users by connecting to the database.
+ * The database connection module is imported dynamically to avoid breaking
+ * the superadmin login if the DB module fails to load.
+ */
+async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
+    // Dynamic import for database connection and ObjectId
+    const { connectToDatabase } = await import('./_lib/mongodb');
+    const { ObjectId } = await import('mongodb');
+
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ message: 'Username and password are required.' });
-    }
 
-    // Hardcoded superadmin check (case-insensitive)
-    if (username.toLowerCase() === 'superadmin') {
-        if (password === 'Cipeng55') {
-            const payload = {
-                userId: 'superadmin_static_id', // Static ID for the hardcoded superadmin
-                username: 'superadmin',
-                role: 'superadmin',
-                clubId: null, // Superadmin is not tied to a specific club from the DB
-                clubName: 'System Administration',
-            };
-            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
-            return res.status(200).json({ token });
-        } else {
-            // Wrong password for superadmin, fail immediately
-            return res.status(401).json({ message: 'Invalid username or password.' });
-        }
-    }
-
-    // Regular user login logic
     try {
         const { db } = await connectToDatabase();
         const usersCollection = db.collection('users');
         const clubsCollection = db.collection('clubs');
-        
-        // Find user, but exclude any 'superadmin' user from the DB to avoid conflicts.
-        const user = await usersCollection.findOne({ 
+
+        const user = await usersCollection.findOne({
             username: { $regex: new RegExp(`^${username}$`, 'i') },
-            role: { $ne: 'superadmin' } // Do not allow login to db-based superadmins
+            role: { $ne: 'superadmin' }
         });
 
         if (!user) {
@@ -53,12 +34,12 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid username or password.' });
         }
-        
+
         if (!user.clubId) {
-            // This should not happen for admin/user roles based on creation logic.
             return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
         }
-        const club = await clubsCollection.findOne({ _id: new (require('mongodb').ObjectId)(user.clubId) });
+        
+        const club = await clubsCollection.findOne({ _id: new ObjectId(user.clubId) });
         if (!club) {
             return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
         }
@@ -68,28 +49,66 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
             userId: user._id.toHexString(),
             username: user.username,
             role: user.role,
-            clubId: user.clubId.toHexString(), // clubId should exist here
+            clubId: user.clubId.toHexString(),
             clubName: clubName,
         };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign(payload, JWT_SECRET!, { expiresIn: '1d' });
         return res.status(200).json({ token });
     } catch (error: any) {
-      console.error('Login API Error:', error);
-      return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+        console.error('Regular User Login API Error:', error);
+        if (error.code === 'ERR_MODULE_NOT_FOUND' || (error.message && error.message.includes('connect'))) {
+            return res.status(500).json({ message: 'Database connection failed.' });
+        }
+        return res.status(500).json({ message: 'An internal error occurred during login.', error: error.message });
     }
+}
+
+
+/**
+ * Main login handler. Checks for superadmin first, then delegates to regular user login.
+ */
+async function handleLogin(req: VercelRequest, res: VercelResponse) {
+    if (!JWT_SECRET) {
+        return res.status(500).json({ message: 'Internal server configuration error: JWT_SECRET not set.' });
+    }
+
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required.' });
+    }
+
+    // Hardcoded superadmin check (case-insensitive) - NO DATABASE INTERACTION
+    if (username.toLowerCase() === 'superadmin') {
+        if (password === 'Cipeng55') {
+            const payload = {
+                userId: 'superadmin_static_id',
+                username: 'superadmin',
+                role: 'superadmin',
+                clubId: null,
+                clubName: 'System Administration',
+            };
+            const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+            return res.status(200).json({ token });
+        } else {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+    }
+
+    // For all other users, delegate to the handler that connects to the DB
+    return handleRegularUserLogin(req, res);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!JWT_SECRET) {
-      console.error('FATAL_ERROR: JWT_SECRET environment variable is not defined.');
-      return res.status(500).json({ message: 'Internal server configuration error.' });
+        console.error('FATAL_ERROR: JWT_SECRET environment variable is not defined.');
+        return res.status(500).json({ message: 'Internal server configuration error.' });
     }
     const { action } = req.query;
 
     if (req.method === 'POST' && action === 'login') {
-      return handleLogin(req, res);
+        return handleLogin(req, res);
     }
-    
+
     res.setHeader('Allow', ['POST']);
     return res.status(404).json({ message: 'Action not found or method not allowed for /api/auth. Use /api/auth?action=login' });
 }
