@@ -2,7 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+// WARNING: Using a default secret for development. This is insecure and should be
+// replaced with a strong, unique secret in a production environment by setting
+// the JWT_SECRET environment variable.
+const JWT_SECRET = process.env.JWT_SECRET || 'insecure-default-dev-secret-please-replace-in-production';
 
 /**
  * Handles login for regular users by connecting to the database.
@@ -52,7 +55,7 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
             clubId: user.clubId.toHexString(),
             clubName: clubName,
         };
-        const token = jwt.sign(payload, JWT_SECRET!, { expiresIn: '1d' });
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
         return res.status(200).json({ token });
     } catch (error: any) {
         console.error('Regular User Login API Error:', error);
@@ -68,10 +71,6 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
  * Main login handler. Checks for superadmin first, then delegates to regular user login.
  */
 async function handleLogin(req: VercelRequest, res: VercelResponse) {
-    if (!JWT_SECRET) {
-        return res.status(500).json({ message: 'Internal server configuration error: JWT_SECRET not set.' });
-    }
-
     const { username, password } = req.body;
     if (!username || !password) {
         return res.status(400).json({ message: 'Username and password are required.' });
@@ -99,10 +98,6 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (!JWT_SECRET) {
-        console.error('FATAL_ERROR: JWT_SECRET environment variable is not defined.');
-        return res.status(500).json({ message: 'Internal server configuration error.' });
-    }
     const { action } = req.query;
 
     if (req.method === 'POST' && action === 'login') {
