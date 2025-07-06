@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { connectToDatabase } from '../_lib/mongodb';
-import { verifyToken } from '../_lib/auth';
+import { connectToDatabase } from '../_lib/mongodb.js';
+import { verifyToken } from '../_lib/auth.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authData = verifyToken(req);

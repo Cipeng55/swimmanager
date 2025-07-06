@@ -14,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'insecure-default-dev-secret-please
  */
 async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
     // Dynamic import for database connection and ObjectId
-    const { connectToDatabase } = await import('./_lib/mongodb');
+    const { connectToDatabase } = await import('./_lib/mongodb.js');
     const { ObjectId } = await import('mongodb');
 
     const { username, password } = req.body;
