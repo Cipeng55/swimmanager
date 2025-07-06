@@ -14,11 +14,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        if (!authData.authorized) {
-            return res.status(401).json({ message: "Unauthorized" });
+        if (!authData.authorized || (authData.role !== 'admin' && authData.role !== 'superadmin')) {
+            return res.status(403).json({ message: "Forbidden: You do not have permission to view user accounts." });
         }
 
-        const users = await usersCollection.find({}, { projection: { password: 0 } }).sort({ username: 1 }).toArray();
+        let query: any = {};
+        if (authData.role === 'admin') {
+            // Admins can only see the 'user' (club) accounts they created.
+            query.role = 'user'; 
+            query.createdByAdminId = authData.userId;
+        } else if (authData.role === 'superadmin') {
+            // Superadmin sees both admins and users
+            query.role = { $in: ['admin', 'user'] };
+        }
+
+        const users = await usersCollection.find(query, { projection: { password: 0 } }).sort({ username: 1 }).toArray();
 
         const transformedUsers = users.map(user => {
           const { _id, ...rest } = user;
@@ -75,6 +85,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (role === 'user') {
             newUserDocument.clubName = clubName.trim();
+            // If the account is created by an admin, tag it with their ID for filtering.
+            if (authData.role === 'admin') {
+                newUserDocument.createdByAdminId = authData.userId;
+            }
         }
 
         const result = await usersCollection.insertOne(newUserDocument);
