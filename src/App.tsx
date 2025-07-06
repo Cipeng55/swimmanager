@@ -11,8 +11,7 @@ import ResultFormPage from './pages/ResultFormPage';
 import EventProgramPage from './pages/EventProgramPage';
 import EventResultsBookPage from './pages/EventResultsBookPage';
 import LoginPage from './pages/LoginPage'; 
-import RegisterPage from './pages/RegisterPage'; // Import RegisterPage
-import AdminUserManagementPage from './pages/AdminUserManagementPage'; 
+import UserManagementPage from './pages/UserManagementPage'; 
 import PrivateRoute from './components/common/PrivateRoute'; 
 import { useAuth } from './contexts/AuthContext'; 
 import PrintableEventProgram from './components/printable/PrintableEventProgram';
@@ -53,7 +52,6 @@ const App: React.FC = () => {
     <Routes>
       {/* Standalone routes that don't use the main app layout */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
 
       {/* All other routes are nested under MainAppLayout to get the common navbar/footer */}
       <Route element={<MainAppLayout />}>
@@ -67,8 +65,8 @@ const App: React.FC = () => {
         <Route path="/events/:eventId/results-book/print" element={<PrintableResultsBook />} />
         <Route path="/events/:eventId/club-starting-list/print" element={<PrintableClubStartingList />} />
 
-        {/* Protected Routes - Accessible by both 'admin' and 'user' */}
-        <Route element={<PrivateRoute allowedRoles={['admin', 'user']} />}>
+        {/* Protected Routes - Accessible by all roles */}
+        <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin', 'user']} />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/swimmers" element={<SwimmersPage />} />
@@ -79,12 +77,12 @@ const App: React.FC = () => {
           <Route path="/club-starting-list" element={<ClubStartingListPage />} /> 
         </Route>
 
-        {/* Admin Only Routes */}
-        <Route element={<PrivateRoute allowedRoles={['admin']} />}>
+        {/* Admin and Super Admin Only Routes */}
+        <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin']} />}>
           <Route path="/swimmers/edit/:swimmerId" element={<SwimmerFormPage />} />
           <Route path="/events/add" element={<EventFormPage />} />
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
-          <Route path="/admin/users" element={<AdminUserManagementPage />} />
+          <Route path="/users/manage" element={<UserManagementPage />} />
           <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
           <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
         </Route>

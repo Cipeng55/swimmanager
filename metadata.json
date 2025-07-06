@@ -1,6 +1,6 @@
 {
-  "name": "Online Swim Manager v2.0",
-  "description": "A multi-tenant web application for swim clubs to manage events, swimmers, and results online.",
+  "name": "Online Swim Manager v3.0",
+  "description": "A centralized, multi-club swim management platform with Super Admin controls.",
   "requestFramePermissions": [],
   "prompt": ""
 }

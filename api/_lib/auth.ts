@@ -8,7 +8,7 @@ interface AuthData {
     message?: string;
     userId?: string;
     clubId?: string;
-    role?: 'admin' | 'user';
+    role?: 'superadmin' | 'admin' | 'user';
 }
 
 export const verifyToken = (req: VercelRequest): AuthData => {

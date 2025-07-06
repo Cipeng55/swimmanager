@@ -34,10 +34,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ message: 'Invalid username or password.' });
     }
 
-    const club = await clubsCollection.findOne({ _id: new (require('mongodb').ObjectId)(user.clubId) });
-    if (!club) {
-        return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
+    let clubName = 'N/A';
+    if (user.clubId) {
+        const club = await clubsCollection.findOne({ _id: new (require('mongodb').ObjectId)(user.clubId) });
+        if (club) {
+            clubName = club.name;
+        } else if (user.role === 'superadmin') {
+            clubName = 'System Administration'; // Graceful fallback for superadmin
+        } else {
+             return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
+        }
     }
+
 
     // Create JWT payload
     const payload = {
@@ -45,10 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       username: user.username,
       role: user.role,
       clubId: user.clubId,
-      clubName: club.name
+      clubName: clubName,
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign(payload, JWT_SECRET!, { expiresIn: '1d' });
 
     return res.status(200).json({ token });
 

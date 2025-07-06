@@ -36,7 +36,7 @@ export interface SwimEvent {
 export type NewSwimEvent = Omit<SwimEvent, 'id' | 'clubId'>;
 
 // --- User Authentication and Roles ---
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'user';
 
 export interface User {
   id: string;
@@ -44,8 +44,14 @@ export interface User {
   username: string;
   password?: string; // Should be hashed in a real backend.
   role: UserRole;
+  clubName?: string; // Joined data for display
 }
-export type NewUser = Omit<User, 'id' | 'clubId'>;
+export type NewUser = Omit<User, 'id' | 'clubId' | 'clubName'>;
+
+// Payload for Super Admin creating users
+export interface AdminNewUserPayload extends NewUser {
+  clubId: string;
+}
 
 export interface CurrentUser {
   id: string;
@@ -59,10 +65,9 @@ export interface CurrentUserContextType {
   currentUser: CurrentUser | null;
   isLoadingAuth: boolean;
   login: (username: string, password_plaintext: string) => Promise<void>;
-  register: (username: string, password_plaintext: string, clubName: string) => Promise<void>;
   logout: () => void;
-  createUser?: (userData: NewUser) => Promise<User>; // Admin only for their club
-  getAllUsers?: () => Promise<User[]>; // Admin only for their club
+  // createUser and getAllUsers are now more complex and handled in the page
+  // The backend will enforce role permissions.
 }
 // --- End User Authentication ---
 

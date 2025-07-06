@@ -83,10 +83,7 @@ const LoginPage: React.FC = () => {
         </form>
          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-                Don't have an account?{' '}
-                <Link to="/register" className="font-medium text-primary hover:text-primary-dark">
-                Register here
-                </Link>
+                Don't have an account? Contact your administrator.
             </p>
          </div>
       </div>

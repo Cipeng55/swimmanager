@@ -54,17 +54,6 @@ export const login = async (username: string, password_plaintext: string): Promi
     return user;
 };
 
-export const register = async (username: string, password_plaintext: string, clubName: string): Promise<CurrentUser> => {
-    const { token } = await apiFetch('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ username, password: password_plaintext, clubName }),
-    });
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    const user = decodeToken(token);
-    if (!user) throw new Error("Failed to decode token after registration.");
-    return user;
-}
-
 export const logout = async (): Promise<void> => {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   return Promise.resolve();
@@ -80,17 +69,4 @@ export const getCurrentUserFromStorage = (): CurrentUser | null => {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     return null;
   }
-};
-
-export const createUser = (userData: NewUser): Promise<User> => {
-    // The auth token will be sent automatically by api.ts's fetch wrapper
-    return apiFetch('/api/users', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-    });
-};
-
-export const getAllUsers = (): Promise<User[]> => {
-    // The auth token will be sent automatically by api.ts's fetch wrapper
-    return apiFetch('/api/users');
 };

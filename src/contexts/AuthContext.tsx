@@ -27,16 +27,6 @@ export const AuthProvider: React.FC<PropsWithChildren<{}>> = ({ children }) => {
     }
   };
 
-  const register = async (username: string, password_plaintext: string, clubName: string) => {
-      setIsLoadingAuth(true);
-      try {
-        const user = await authService.register(username, password_plaintext, clubName);
-        setCurrentUser(user);
-      } finally {
-        setIsLoadingAuth(false);
-      }
-  };
-
   const logout = async () => {
     setIsLoadingAuth(true);
     await authService.logout();
@@ -44,24 +34,11 @@ export const AuthProvider: React.FC<PropsWithChildren<{}>> = ({ children }) => {
     setIsLoadingAuth(false);
   };
   
-  // Admin-specific functions (only available if admin is logged in, for type safety)
-  const createUser = currentUser?.role === 'admin' 
-    ? async (userData: NewUser): Promise<User> => authService.createUser(userData) 
-    : undefined;
-
-  const getAllUsers = currentUser?.role === 'admin' 
-    ? async (): Promise<User[]> => authService.getAllUsers()
-    : undefined;
-
-
   const value = {
     currentUser,
     isLoadingAuth,
     login,
-    register,
     logout,
-    createUser,
-    getAllUsers,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

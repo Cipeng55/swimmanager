@@ -61,8 +61,8 @@ const Navbar: React.FC = () => {
                 <li><NavLink to="/swimmers" className={navLinkClass} onClick={()=>setIsOpen(false)}>Swimmers</NavLink></li>
                 <li><NavLink to="/results" className={navLinkClass} onClick={()=>setIsOpen(false)}>Results</NavLink></li>
                 <li><NavLink to="/club-starting-list" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Starting List</NavLink></li> 
-                {currentUser.role === 'admin' && (
-                  <li><NavLink to="/admin/users" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Users</NavLink></li>
+                {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                  <li><NavLink to="/users/manage" className={navLinkClass} onClick={()=>setIsOpen(false)}>Manage Users</NavLink></li>
                 )}
               </>
             )}
@@ -77,15 +77,6 @@ const Navbar: React.FC = () => {
                     <div className="flex items-center space-x-2">
                         <li>
                             <NavLink to="/login" className={navLinkClass} onClick={()=>setIsOpen(false)}>Login</NavLink>
-                        </li>
-                        <li>
-                           <NavLink 
-                             to="/register" 
-                             onClick={()=>setIsOpen(false)}
-                             className="block px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md shadow-sm"
-                            >
-                              Register
-                            </NavLink>
                         </li>
                     </div>
                     )
