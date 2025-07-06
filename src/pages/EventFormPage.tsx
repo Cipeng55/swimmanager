@@ -236,7 +236,7 @@ const EventFormPage: React.FC = () => {
                     ))}
                 </div>
             ) : (
-                <p className="text-sm text-gray-500">No clubs (user accounts) found. A Superadmin must create them first.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No clubs (user accounts) found. Please go to the <Link to="/users/manage" className="text-primary hover:underline">Manage Accounts</Link> page to create them.</p>
             )}
         </div>
         
