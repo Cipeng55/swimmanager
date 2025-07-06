@@ -1,50 +1,58 @@
-
 /**
- * @file This file is a BLUEPRINT for a real authentication service.
- * All functions now communicate with a hypothetical backend API.
- * The logic of managing a user list in localStorage has been removed.
- * This code requires a backend with endpoints like /api/auth/login, /api/users, etc.
+ * @file This file provides a mocked authentication service using localStorage.
+ * It manages users and login sessions locally in the browser, creating default
+ * users on first load to ensure the app is usable out-of-the-box.
  */
 
 import { User, NewUser, CurrentUser } from '../types';
 
+const USERS_KEY = 'swim_manager_users';
 const CURRENT_USER_KEY = 'swim_manager_current_user_auth';
 
-// A helper function for making API requests to the backend.
-const apiFetch = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: response.statusText }));
-    throw new Error(errorData.message || 'An API error occurred');
+// Initialize with default users if none exist. This makes the app work on first load.
+const initializeUsers = (): User[] => {
+  try {
+    const usersJson = localStorage.getItem(USERS_KEY);
+    if (usersJson && JSON.parse(usersJson).length > 0) {
+      return JSON.parse(usersJson);
+    }
+  } catch (e) {
+    console.error("Could not parse users from localStorage, resetting.", e);
   }
-  if (response.status === 204) {
-    return null as T;
-  }
-  return response.json();
+
+  // No users found or data is corrupt, create default admin and user
+  const defaultUsers: User[] = [
+    { id: 1, username: 'admin', password: 'admin', role: 'admin' }, // Passwords are plaintext for this simulation
+    { id: 2, username: 'user', password: 'user', role: 'user' },
+  ];
+  localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+  return defaultUsers;
 };
 
-export const login = async (username: string, password_plaintext: string): Promise<CurrentUser> => {
-  // In a real app, the backend receives the password, hashes it, compares it, and returns a user object or token.
-  // The backend should never receive or store plaintext passwords. Hashing should be done on the server.
-  const currentUserData = await apiFetch<CurrentUser>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password: password_plaintext }),
-  });
+// Ensure users are initialized on module load
+initializeUsers();
 
-  if (currentUserData) {
+
+export const login = async (username: string, password_plaintext: string): Promise<CurrentUser> => {
+  const users = initializeUsers(); // Read fresh list
+  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password_plaintext);
+
+  if (user) {
+    const currentUserData: CurrentUser = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUserData));
-    return currentUserData;
+    return Promise.resolve(currentUserData);
   } else {
-    throw new Error('Login failed: No user data returned from server.');
+    return Promise.reject(new Error('Invalid username or password.'));
   }
 };
 
 export const logout = async (): Promise<void> => {
-  // Inform the backend that the user is logging out (e.g., to invalidate a token)
-  await apiFetch('/api/auth/logout', { method: 'POST' });
-  // Always clear local session data regardless of API call success
   localStorage.removeItem(CURRENT_USER_KEY);
+  return Promise.resolve();
 };
 
 export const getCurrentUserFromStorage = (): CurrentUser | null => {
@@ -53,27 +61,46 @@ export const getCurrentUserFromStorage = (): CurrentUser | null => {
     return currentUserJson ? JSON.parse(currentUserJson) : null;
   } catch (error) {
     console.error("Error parsing current user from localStorage:", error);
+    localStorage.removeItem(CURRENT_USER_KEY);
     return null;
   }
 };
 
-export const createUser = async (userData: NewUser): Promise<User> => { // Admin only
-  // The backend will handle authorization (is the caller an admin?)
-  return apiFetch<User>('/api/users', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-  });
+export const createUser = async (userData: NewUser): Promise<User> => {
+  const users = initializeUsers();
+  if (users.some(u => u.username.toLowerCase() === userData.username.toLowerCase())) {
+    return Promise.reject(new Error('Username already exists.'));
+  }
+  const newUser: User = {
+    ...userData,
+    id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
+    password: userData.password,
+  };
+  users.push(newUser);
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  return Promise.resolve(newUser);
 };
 
-export const getAllUsers = async (): Promise<User[]> => { // Admin only
-  // The backend will handle authorization and should not return passwords.
-  return apiFetch<User[]>('/api/users');
+export const getAllUsers = async (): Promise<User[]> => {
+  const users = initializeUsers();
+  // IMPORTANT: Never return passwords to the client, even in a simulation.
+  const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+  // @ts-ignore
+  return Promise.resolve(usersWithoutPasswords);
 };
 
 export const changePassword = async (userId: number, currentPassword_plaintext: string, newPassword_plaintext: string): Promise<void> => {
-  // The backend will verify the current password and update to the new one.
-  return apiFetch('/api/users/change-password', {
-    method: 'POST',
-    body: JSON.stringify({ userId, currentPassword: currentPassword_plaintext, newPassword: newPassword_plaintext }),
-  });
+    let users = initializeUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+
+    if (userIndex === -1) {
+        return Promise.reject(new Error("User not found."));
+    }
+    if (users[userIndex].password !== currentPassword_plaintext) {
+        return Promise.reject(new Error("Current password is incorrect."));
+    }
+
+    users[userIndex].password = newPassword_plaintext;
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return Promise.resolve();
 };
