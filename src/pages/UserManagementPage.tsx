@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { User, NewUser, AdminNewUserPayload, Club, SelectOption, UserRole } from '../types';
+import { User, AdminNewUserPayload, Club, SelectOption, UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, getClubs } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -13,7 +13,9 @@ const UserManagementPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [newUser, setNewUser] = useState<Partial<AdminNewUserPayload>>({ username: '', password: '', role: 'user', clubId: '' });
-  
+  const [clubCreationMode, setClubCreationMode] = useState<'existing' | 'new'>('existing');
+  const [newClubName, setNewClubName] = useState('');
+
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,7 +51,7 @@ const UserManagementPage: React.FC = () => {
     if (currentUser?.role === 'superadmin') {
       return [
         { value: 'user', label: 'User' },
-        { value: 'admin', label: 'Admin' },
+        { value: 'admin', label: 'Admin (System-Level)' },
       ];
     }
     return [{ value: 'user', label: 'User' }];
@@ -68,33 +70,45 @@ const UserManagementPage: React.FC = () => {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
+    setFormError(null);
 
-    if (!newUser.username?.trim() || !newUser.password?.trim()) {
-        setFormError("Username and password are required.");
-        return;
-    }
-    if (currentUser.role === 'superadmin' && newUser.role === 'admin' && !newUser.clubId) {
-        setFormError("A club must be assigned to create an Admin user.");
+    if (!newUser.username?.trim() || !newUser.password?.trim() || !newUser.role) {
+        setFormError("Username, password, and role are required.");
         return;
     }
 
+    let payload: AdminNewUserPayload = {
+        username: newUser.username,
+        password: newUser.password,
+        role: newUser.role,
+    };
+    
+    if (currentUser.role === 'superadmin' && newUser.role === 'user') {
+        if (clubCreationMode === 'new') {
+            if (!newClubName.trim()) {
+                setFormError("New club name cannot be empty.");
+                return;
+            }
+            payload.newClubName = newClubName.trim();
+        } else {
+            if (!newUser.clubId) {
+                setFormError("A club must be selected for the new user.");
+                return;
+            }
+            payload.clubId = newUser.clubId;
+        }
+    }
 
     setIsSubmitting(true);
-    setFormError(null);
     try {
-        const payload: AdminNewUserPayload = {
-            username: newUser.username!,
-            password: newUser.password!,
-            role: newUser.role! as UserRole,
-            clubId: newUser.clubId!,
-        };
-        
         await apiCreateUser(payload);
         
         setNewUser({ username: '', password: '', role: 'user', clubId: '' });
+        setNewClubName('');
+        setClubCreationMode('existing');
         fetchData(); 
     } catch (err: any) {
-        setFormError(err.message || "Failed to create user. Username might already exist.");
+        setFormError(err.message || "Failed to create user. Username or Club Name might already exist.");
     } finally {
         setIsSubmitting(false);
     }
@@ -133,7 +147,7 @@ const UserManagementPage: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.username}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300 capitalize">{user.role}</td>
                             {currentUser?.role === 'superadmin' && (
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.clubName || 'Unassigned'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.clubName || 'N/A (System-Level)'}</td>
                             )}
                         </tr>
                     ))}
@@ -159,19 +173,49 @@ const UserManagementPage: React.FC = () => {
                 required
                 disabled={isSubmitting || currentUser?.role === 'admin'}
             />
-            {currentUser?.role === 'superadmin' && newUser.role === 'admin' && (
-                <FormField
-                    label="Assign to Club"
-                    id="clubId"
-                    name="clubId"
-                    type="select"
-                    options={clubOptions}
-                    value={newUser.clubId || ''}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Select a club..."
-                    disabled={isSubmitting}
-                />
+            {currentUser?.role === 'superadmin' && newUser.role === 'user' && (
+                <div className="space-y-4 p-3 border rounded-md border-gray-300 dark:border-gray-600">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Club Assignment</p>
+                    <div className="flex items-center space-x-4">
+                        <div className="flex items-center">
+                            <input type="radio" id="existingClub" name="clubCreationMode" value="existing" checked={clubCreationMode === 'existing'} onChange={() => setClubCreationMode('existing')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
+                            <label htmlFor="existingClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Existing Club</label>
+                        </div>
+                        <div className="flex items-center">
+                            <input type="radio" id="newClub" name="clubCreationMode" value="new" checked={clubCreationMode === 'new'} onChange={() => setClubCreationMode('new')} className="focus:ring-primary h-4 w-4 text-primary border-gray-300"/>
+                            <label htmlFor="newClub" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Create New</label>
+                        </div>
+                    </div>
+        
+                    {clubCreationMode === 'existing' ? (
+                        <FormField
+                            label=""
+                            id="clubId"
+                            name="clubId"
+                            type="select"
+                            options={clubOptions}
+                            value={newUser.clubId || ''}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="Select an existing club..."
+                            disabled={isSubmitting}
+                            containerClassName="mb-0"
+                        />
+                    ) : (
+                        <FormField
+                            label=""
+                            id="newClubName"
+                            name="newClubName"
+                            type="text"
+                            placeholder="Enter new club name..."
+                            value={newClubName}
+                            onChange={(e) => setNewClubName(e.target.value)}
+                            required
+                            disabled={isSubmitting}
+                            containerClassName="mb-0"
+                        />
+                    )}
+                </div>
             )}
             
             <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light disabled:opacity-50">

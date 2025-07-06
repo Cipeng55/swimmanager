@@ -40,22 +40,30 @@ export type UserRole = 'superadmin' | 'admin' | 'user';
 
 export interface User {
   id: string;
-  clubId: string; // Multi-tenancy key
+  clubId: string | null; // Can be null for superadmin/admin
   username: string;
   password?: string; // Should be hashed in a real backend.
   role: UserRole;
   clubName?: string; // Joined data for display
 }
-export type NewUser = Omit<User, 'id' | 'clubId' | 'clubName'>;
+export interface NewUser {
+  username: string;
+  password: string;
+  role: UserRole;
+}
 
 // Payload for Super Admin creating users
 export interface AdminNewUserPayload extends NewUser {
-  clubId: string;
+  // When role is 'admin', no club info is needed.
+  // When role is 'user', one of these is needed.
+  clubId?: string;
+  newClubName?: string;
 }
+
 
 export interface CurrentUser {
   id: string;
-  clubId: string;
+  clubId: string | null; // Can be null for superadmin/admin
   clubName: string;
   username: string;
   role: UserRole;
