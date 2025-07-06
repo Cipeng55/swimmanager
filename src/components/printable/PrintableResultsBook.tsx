@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { ResultsBookPrintData, SwimEvent, RaceResults, ResultEntry, Swimmer, SwimResult } from '../../types';
@@ -85,18 +84,17 @@ const PrintableResultsBook: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const numericEventId = parseInt(eventId);
-      if (isNaN(numericEventId)) { throw new Error("Invalid Event ID format."); }
+      if (isNaN(parseInt(eventId))) { throw new Error("Invalid Event ID format."); }
       
       const [eventData, resultsData, swimmersData] = await Promise.all([
-        getEventById(numericEventId),
+        getEventById(eventId),
         getResults(),
         getSwimmers()
       ]);
 
-      if (!eventData) { throw new Error(`Event with ID ${numericEventId} not found.`); }
+      if (!eventData) { throw new Error(`Event with ID ${eventId} not found.`); }
       
-      const filteredResults = resultsData.filter(r => r.eventId === numericEventId);
+      const filteredResults = resultsData.filter(r => r.eventId === eventId);
       const processedRaceResults = processDataForBook(eventData, filteredResults, swimmersData);
 
       setPrintData({

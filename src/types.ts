@@ -1,5 +1,9 @@
-
 import React from 'react';
+
+export interface Club {
+  id: string;
+  name: string;
+}
 
 export interface DashboardSummaryItemData {
   id: string;
@@ -18,7 +22,8 @@ export interface LetterAgeRange {
 }
 
 export interface SwimEvent {
-  id: number;
+  id: string;
+  clubId: string; // Multi-tenancy key
   name: string;
   date: string; // ISO date string (e.g., "2024-07-28")
   location: string;
@@ -28,21 +33,24 @@ export interface SwimEvent {
   categorySystem?: 'KU' | 'LETTER' | 'GRADE';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
 }
-export type NewSwimEvent = Omit<SwimEvent, 'id'>;
+export type NewSwimEvent = Omit<SwimEvent, 'id' | 'clubId'>;
 
 // --- User Authentication and Roles ---
 export type UserRole = 'admin' | 'user';
 
 export interface User {
-  id: number;
+  id: string;
+  clubId: string; // Multi-tenancy key
   username: string;
-  password?: string; // Should be hashed in a real backend. Plaintext for simulation.
+  password?: string; // Should be hashed in a real backend.
   role: UserRole;
 }
-export type NewUser = Omit<User, 'id'>;
+export type NewUser = Omit<User, 'id' | 'clubId'>;
 
 export interface CurrentUser {
-  id: number;
+  id: string;
+  clubId: string;
+  clubName: string;
   username: string;
   role: UserRole;
 }
@@ -51,37 +59,40 @@ export interface CurrentUserContextType {
   currentUser: CurrentUser | null;
   isLoadingAuth: boolean;
   login: (username: string, password_plaintext: string) => Promise<void>;
+  register: (username: string, password_plaintext: string, clubName: string) => Promise<void>;
   logout: () => void;
-  createUser?: (userData: NewUser) => Promise<User>; // Admin only
-  getAllUsers?: () => Promise<User[]>; // Admin only
+  createUser?: (userData: NewUser) => Promise<User>; // Admin only for their club
+  getAllUsers?: () => Promise<User[]>; // Admin only for their club
 }
 // --- End User Authentication ---
 
 
 export interface Swimmer {
-  id: number;
+  id: string;
+  clubId: string; // Multi-tenancy key
   name: string;
   dob: string; // ISO date string (e.g., "1998-03-15")
   gender: 'Male' | 'Female' | 'Other';
   club: string; 
   gradeLevel?: string; // e.g., "TK A", "SD Kelas 1", "SMA Kelas XII"
-  createdByUserId?: number; // Tracks which user created this swimmer
+  createdByUserId?: string; // Tracks which user created this swimmer
 }
-export type NewSwimmer = Omit<Swimmer, 'id'>;
+export type NewSwimmer = Omit<Swimmer, 'id' | 'clubId'>;
 
 export interface SwimResult {
-  id: number;
-  swimmerId: number;
-  eventId: number;
+  id: string;
+  clubId: string; // Multi-tenancy key
+  swimmerId: string;
+  eventId: string;
   style: string; // e.g., 'Freestyle', 'Butterfly', 'Backstroke', 'Breaststroke'
   distance: number; // in meters, e.g., 50, 100, 200
   seedTime?: string; // Optional: e.g., "00:58.63" (MM:SS.ss) - For heat sheet generation
   time?: string; // Optional: Official final time: e.g., "00:58.63" (MM:SS.ss)
   dateRecorded: string; // ISO date string
   remarks?: string; // Optional: For any notes on the result
-  createdByUserId?: number; // Tracks which user created this result
+  createdByUserId?: string; // Tracks which user created this result
 }
-export type NewSwimResult = Omit<SwimResult, 'id'>;
+export type NewSwimResult = Omit<SwimResult, 'id' | 'clubId'>;
 
 // For select options
 export interface SelectOption {
@@ -99,8 +110,8 @@ export interface RaceDefinition {
 }
 
 export interface SeededSwimmerInfo {
-  swimmerId: number;
-  resultId: number; // ID of the original SwimResult, for updating
+  swimmerId: string;
+  resultId: string; // ID of the original SwimResult, for updating
   name: string;
   club: string; 
   seedTimeMs: number; 
@@ -152,7 +163,7 @@ export interface ImportFeedback {
   skippedCount: number;
   rowErrors: RowError[];
   generalError?: string; // For errors like bad headers, file read issues
-  status: 'idle' | 'processing' | 'completed' | 'error'; // To manage UI state
+  status: 'idle' | 'processing' | 'completed' | 'error';
 }
 
 // For ResultFormPage race type selection

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { WaterPoloIcon } from './icons/WaterPoloIcon';
@@ -28,9 +27,14 @@ const Navbar: React.FC = () => {
       <div className="container flex flex-wrap justify-between items-center mx-auto">
         <NavLink to="/dashboard" className="flex items-center">
           <WaterPoloIcon className="h-8 w-8 mr-3 text-primary" />
-          <span className="self-center text-xl font-semibold whitespace-nowrap text-gray-800 dark:text-white">
-            Swim Manager
-          </span>
+          <div className="flex flex-col">
+            <span className="self-center text-xl font-semibold whitespace-nowrap text-gray-800 dark:text-white">
+              Swim Manager
+            </span>
+             {currentUser && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">{currentUser.clubName}</span>
+             )}
+          </div>
         </NavLink>
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -58,7 +62,7 @@ const Navbar: React.FC = () => {
                 <li><NavLink to="/results" className={navLinkClass} onClick={()=>setIsOpen(false)}>Results</NavLink></li>
                 <li><NavLink to="/club-starting-list" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Starting List</NavLink></li> 
                 {currentUser.role === 'admin' && (
-                  <li><NavLink to="/admin/users" className={navLinkClass} onClick={()=>setIsOpen(false)}>User Mgmt</NavLink></li>
+                  <li><NavLink to="/admin/users" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Users</NavLink></li>
                 )}
               </>
             )}
@@ -70,9 +74,20 @@ const Navbar: React.FC = () => {
                         </button>
                     </li>
                     ) : (
-                    <li>
-                        <NavLink to="/login" className={navLinkClass} onClick={()=>setIsOpen(false)}>Login</NavLink>
-                    </li>
+                    <div className="flex items-center space-x-2">
+                        <li>
+                            <NavLink to="/login" className={navLinkClass} onClick={()=>setIsOpen(false)}>Login</NavLink>
+                        </li>
+                        <li>
+                           <NavLink 
+                             to="/register" 
+                             onClick={()=>setIsOpen(false)}
+                             className="block px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md shadow-sm"
+                            >
+                              Register
+                            </NavLink>
+                        </li>
+                    </div>
                     )
             )}
             {isLoadingAuth && <li><span className="block py-2 px-3 text-gray-400">Loading...</span></li>}

@@ -1,6 +1,6 @@
 {
-  "name": "Local Swim Manager V.1.4.1 versi KU online",
-  "description": "A web application to manage swim events, swimmers, and results.",
+  "name": "Online Swim Manager v2.0",
+  "description": "A multi-tenant web application for swim clubs to manage events, swimmers, and results online.",
   "requestFramePermissions": [],
   "prompt": ""
 }

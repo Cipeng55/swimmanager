@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, NewUser } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,14 +72,14 @@ const AdminUserManagementPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300">Create and manage user accounts.</p>
+        <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Club User Management</h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">Create and manage user accounts for your club.</p>
       </header>
       {error && <div className="mb-4 p-3 text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700 rounded-md">{error}</div>}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Existing Users</h2>
+           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Existing Club Users</h2>
            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
@@ -102,7 +101,7 @@ const AdminUserManagementPage: React.FC = () => {
         </div>
 
         <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Add New User</h2>
+           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-6">Add New User to Club</h2>
            <form onSubmit={handleAddUser} className="space-y-4">
             {formError && <p className="text-sm text-red-500">{formError}</p>}
             <FormField

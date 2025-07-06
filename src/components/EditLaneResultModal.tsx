@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Modal from './common/Modal';
 import FormField from './common/FormField';
@@ -9,7 +8,7 @@ interface EditLaneResultModalProps {
   isOpen: boolean;
   onClose: () => void;
   swimmerData: LaneSwimmerDetails | null;
-  onSave: (resultId: number, finalTime?: string, remarks?: string) => Promise<void>;
+  onSave: (resultId: string, finalTime?: string, remarks?: string) => Promise<void>;
 }
 
 const remarkOptions: SelectOption[] = [

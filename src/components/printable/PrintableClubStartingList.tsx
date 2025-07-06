@@ -51,17 +51,16 @@ const PrintableClubStartingList: React.FC = () => {
     setError(null);
 
     try {
-        const numericEventId = parseInt(eventId);
         const [allEvents, allSwimmers, allResults] = await Promise.all([
             getEvents(),
             getSwimmers(),
             getResults()
         ]);
         
-        const eventDetails = allEvents.find(e => e.id === numericEventId);
+        const eventDetails = allEvents.find(e => e.id === eventId);
         if (!eventDetails) throw new Error("Event not found.");
 
-        const eventResults = allResults.filter(r => r.eventId === numericEventId);
+        const eventResults = allResults.filter(r => r.eventId === eventId);
         
         // --- Replicate logic from ClubStartingListPage ---
         const raceMap = new Map<string, RaceDefinition>();
@@ -78,7 +77,7 @@ const PrintableClubStartingList: React.FC = () => {
         const initialUniqueRaces = Array.from(raceMap.values());
         
         let orderedUniqueRaces: RaceDefinition[] = [];
-        const customOrderedKeys = await getEventProgramOrder(numericEventId);
+        const customOrderedKeys = await getEventProgramOrder(eventId);
         if (customOrderedKeys) {
             const initialRacesMap = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
             customOrderedKeys.forEach(key => {

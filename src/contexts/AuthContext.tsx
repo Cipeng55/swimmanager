@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect, PropsWithChildren } from 'react';
 import { CurrentUser, CurrentUserContextType, NewUser, User } from '../types';
 import * as authService from '../services/authService';
@@ -7,10 +6,10 @@ const AuthContext = createContext<CurrentUserContextType | undefined>(undefined)
 
 export const AuthProvider: React.FC<PropsWithChildren<{}>> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true); // Start true to check storage
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check for existing user in storage on initial load
+    // Check for existing user token in storage on initial load
     const userFromStorage = authService.getCurrentUserFromStorage();
     if (userFromStorage) {
       setCurrentUser(userFromStorage);
@@ -23,11 +22,19 @@ export const AuthProvider: React.FC<PropsWithChildren<{}>> = ({ children }) => {
     try {
       const user = await authService.login(username, password_plaintext);
       setCurrentUser(user);
+    } finally {
       setIsLoadingAuth(false);
-    } catch (error) {
-      setIsLoadingAuth(false);
-      throw error; // Re-throw to be caught by LoginPage
     }
+  };
+
+  const register = async (username: string, password_plaintext: string, clubName: string) => {
+      setIsLoadingAuth(true);
+      try {
+        const user = await authService.register(username, password_plaintext, clubName);
+        setCurrentUser(user);
+      } finally {
+        setIsLoadingAuth(false);
+      }
   };
 
   const logout = async () => {
@@ -51,6 +58,7 @@ export const AuthProvider: React.FC<PropsWithChildren<{}>> = ({ children }) => {
     currentUser,
     isLoadingAuth,
     login,
+    register,
     logout,
     createUser,
     getAllUsers,

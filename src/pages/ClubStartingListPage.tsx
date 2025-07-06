@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SwimEvent, Swimmer, SelectOption, RaceDefinition, SeededSwimmerInfo, Heat, ClubStartingListInfo, ClubRaceInfo, ClubStartingListPrintData } from '../types';
+import { SwimEvent, Swimmer, SelectOption, RaceDefinition, SeededSwimmerInfo, Heat, ClubStartingListInfo, ClubRaceInfo, ClubStartingListPrintData, SwimResult } from '../types';
 import { getEvents, getSwimmers, getResults, getEventProgramOrder } from '../services/api';
 import { generateHeats } from '../utils/seedingUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../utils/ageUtils';
@@ -33,7 +32,7 @@ const defaultRaceSort = (a: RaceDefinition, b: RaceDefinition): number => {
 const ClubStartingListPage: React.FC = () => {
     const [events, setEvents] = useState<SwimEvent[]>([]);
     const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
-    const [results, setResults] = useState<any[]>([]);
+    const [results, setResults] = useState<SwimResult[]>([]);
     const [selectedEventId, setSelectedEventId] = useState<string>('');
     const [selectedClub, setSelectedClub] = useState<string>('');
     const [startingList, setStartingList] = useState<ClubRaceInfo[]>([]);
@@ -64,7 +63,7 @@ const ClubStartingListPage: React.FC = () => {
         loadInitialData();
     }, []);
 
-    const eventOptions = useMemo(() => events.map(e => ({ value: e.id.toString(), label: `${e.name} (${new Date(e.date).toLocaleDateString()})` })), [events]);
+    const eventOptions = useMemo(() => events.map(e => ({ value: e.id, label: `${e.name} (${new Date(e.date).toLocaleDateString()})` })), [events]);
     const clubOptions = useMemo(() => {
         const allClubs = [...new Set(swimmers.map(s => s.club))].sort();
         const options: SelectOption[] = allClubs.map(c => ({ value: c, label: c }));
@@ -84,11 +83,10 @@ const ClubStartingListPage: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                const numericEventId = parseInt(selectedEventId);
-                const eventDetails = events.find(e => e.id === numericEventId);
+                const eventDetails = events.find(e => e.id === selectedEventId);
                 if (!eventDetails) throw new Error("Selected event not found.");
 
-                const eventResults = results.filter(r => r.eventId === numericEventId);
+                const eventResults = results.filter(r => r.eventId === selectedEventId);
                 
                 // 1. Determine all unique races in the event
                 const raceMap = new Map<string, RaceDefinition>();
@@ -106,7 +104,7 @@ const ClubStartingListPage: React.FC = () => {
                 
                 // 2. Order the races
                 let orderedUniqueRaces: RaceDefinition[] = [];
-                const customOrderedKeys = await getEventProgramOrder(numericEventId);
+                const customOrderedKeys = await getEventProgramOrder(selectedEventId);
                 if (customOrderedKeys) {
                     const initialRacesMap = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
                     customOrderedKeys.forEach(key => {
@@ -189,7 +187,7 @@ const ClubStartingListPage: React.FC = () => {
 
     const handlePrint = () => {
         if (!selectedEventId || !selectedClub || !events.length) return;
-        const event = events.find(e => e.id === parseInt(selectedEventId));
+        const event = events.find(e => e.id === selectedEventId);
         if (!event) return;
 
         const printData: ClubStartingListPrintData = {

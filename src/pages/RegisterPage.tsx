@@ -1,44 +1,52 @@
 import React, { useState, FormEvent } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 import { WaterPoloIcon } from '../components/icons/WaterPoloIcon';
 
-const LoginPage: React.FC = () => {
+const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [clubName, setClubName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login } = useAuth();
+  const { register } = useAuth();
   
-  const from = location.state?.from?.pathname || '/dashboard';
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    setIsLoading(true);
 
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        return;
+    }
+
+    setIsLoading(true);
     try {
-      await login(username, password);
-      navigate(from, { replace: true });
+      await register(username, password, clubName);
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Please check your credentials.');
+      setError(err.message || 'Failed to register. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4 py-8">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6">
         <div className="text-center">
             <WaterPoloIcon className="mx-auto h-12 w-12 text-primary" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Welcome Back</h1>
-            <p className="text-gray-600 dark:text-gray-300">Sign in to your Swim Manager account</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Create Your Account</h1>
+            <p className="text-gray-600 dark:text-gray-300">Start managing your swim club today</p>
         </div>
 
         {error && (
@@ -47,10 +55,22 @@ const LoginPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <FormField
+            id="clubName"
+            label="Club Name"
+            type="text"
+            name="clubName"
+            value={clubName}
+            onChange={(e) => setClubName(e.target.value)}
+            required
+            autoComplete="organization"
+            disabled={isLoading}
+            placeholder="e.g., Dolphin Swim Club"
+          />
+           <FormField
             id="username"
-            label="Username"
+            label="Your Username (Admin for the club)"
             type="text"
             name="username"
             value={username}
@@ -58,6 +78,7 @@ const LoginPage: React.FC = () => {
             required
             autoComplete="username"
             disabled={isLoading}
+            placeholder="e.g., johndoe"
           />
           <FormField
             id="password"
@@ -67,7 +88,18 @@ const LoginPage: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete="current-password"
+            autoComplete="new-password"
+            disabled={isLoading}
+          />
+           <FormField
+            id="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            name="confirmPassword"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            autoComplete="new-password"
             disabled={isLoading}
           />
           <div>
@@ -77,15 +109,15 @@ const LoginPage: React.FC = () => {
               className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-light dark:focus:ring-offset-gray-800 disabled:opacity-50"
             >
               {isLoading && <ButtonSpinnerIcon className="h-5 w-5 mr-2" />}
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? 'Registering...' : 'Register'}
             </button>
           </div>
         </form>
          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
-                Don't have an account?{' '}
-                <Link to="/register" className="font-medium text-primary hover:text-primary-dark">
-                Register here
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-primary hover:text-primary-dark">
+                Login here
                 </Link>
             </p>
          </div>
@@ -94,4 +126,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default RegisterPage;

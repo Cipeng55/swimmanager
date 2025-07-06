@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -12,6 +11,7 @@ import ResultFormPage from './pages/ResultFormPage';
 import EventProgramPage from './pages/EventProgramPage';
 import EventResultsBookPage from './pages/EventResultsBookPage';
 import LoginPage from './pages/LoginPage'; 
+import RegisterPage from './pages/RegisterPage'; // Import RegisterPage
 import AdminUserManagementPage from './pages/AdminUserManagementPage'; 
 import PrivateRoute from './components/common/PrivateRoute'; 
 import { useAuth } from './contexts/AuthContext'; 
@@ -39,7 +39,7 @@ const MainAppLayout: React.FC = () => {
         <Outlet />
       </main>
       <footer className="bg-gray-200 dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-center p-4 border-t dark:border-gray-700">
-        © {new Date().getFullYear()} Local Swim Manager (Simulated Auth)
+        © {new Date().getFullYear()} Online Swim Manager
       </footer>
     </div>
   );
@@ -53,6 +53,7 @@ const App: React.FC = () => {
     <Routes>
       {/* Standalone routes that don't use the main app layout */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* All other routes are nested under MainAppLayout to get the common navbar/footer */}
       <Route element={<MainAppLayout />}>

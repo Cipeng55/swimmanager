@@ -1,106 +1,96 @@
 /**
- * @file This file provides a mocked authentication service using localStorage.
- * It manages users and login sessions locally in the browser, creating default
- * users on first load to ensure the app is usable out-of-the-box.
+ * @file This file provides an authentication service using JWT
+ * and a backend API for user verification and management.
  */
 
 import { User, NewUser, CurrentUser } from '../types';
+import { jwtDecode } from 'jwt-decode'; // Using a community-standard library
 
-const USERS_KEY = 'swim_manager_users';
-const CURRENT_USER_KEY = 'swim_manager_current_user_auth';
+const AUTH_TOKEN_KEY = 'swim_manager_auth_token';
 
-// Initialize with default users if none exist. This makes the app work on first load.
-const initializeUsers = (): User[] => {
-  try {
-    const usersJson = localStorage.getItem(USERS_KEY);
-    if (usersJson && JSON.parse(usersJson).length > 0) {
-      return JSON.parse(usersJson);
+const apiFetch = async (url: string, options: RequestInit = {}) => {
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || 'An API error occurred');
     }
-  } catch (e) {
-    console.error("Could not parse users from localStorage, resetting.", e);
-  }
-
-  // No users found or data is corrupt, create default admin and user
-  const defaultUsers: User[] = [
-    { id: 1, username: 'admin', password: 'admin', role: 'admin' }, // Passwords are plaintext for this simulation
-    { id: 2, username: 'user', password: 'user', role: 'user' },
-  ];
-  localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-  return defaultUsers;
+    return response.json();
 };
 
-// Ensure users are initialized on module load
-initializeUsers();
+// Decodes the JWT to get user payload.
+const decodeToken = (token: string): CurrentUser | null => {
+  try {
+    const decoded: any = jwtDecode(token);
+    // 'iat' and 'exp' are standard JWT claims (issued at, expiration time)
+    // The payload we set on the server will be available here.
+    return {
+      id: decoded.userId,
+      username: decoded.username,
+      role: decoded.role,
+      clubId: decoded.clubId,
+      clubName: decoded.clubName,
+    };
+  } catch (error) {
+    console.error("Invalid token:", error);
+    return null;
+  }
+};
 
 
 export const login = async (username: string, password_plaintext: string): Promise<CurrentUser> => {
-  const users = initializeUsers(); // Read fresh list
-  const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password_plaintext);
-
-  if (user) {
-    const currentUserData: CurrentUser = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUserData));
-    return Promise.resolve(currentUserData);
-  } else {
-    return Promise.reject(new Error('Invalid username or password.'));
-  }
+    const { token } = await apiFetch('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password: password_plaintext }),
+    });
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    const user = decodeToken(token);
+    if (!user) throw new Error("Failed to decode token after login.");
+    return user;
 };
 
+export const register = async (username: string, password_plaintext: string, clubName: string): Promise<CurrentUser> => {
+    const { token } = await apiFetch('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password: password_plaintext, clubName }),
+    });
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    const user = decodeToken(token);
+    if (!user) throw new Error("Failed to decode token after registration.");
+    return user;
+}
+
 export const logout = async (): Promise<void> => {
-  localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
   return Promise.resolve();
 };
 
 export const getCurrentUserFromStorage = (): CurrentUser | null => {
   try {
-    const currentUserJson = localStorage.getItem(CURRENT_USER_KEY);
-    return currentUserJson ? JSON.parse(currentUserJson) : null;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return null;
+    return decodeToken(token);
   } catch (error) {
-    console.error("Error parsing current user from localStorage:", error);
-    localStorage.removeItem(CURRENT_USER_KEY);
+    console.error("Error processing user from storage:", error);
+    localStorage.removeItem(AUTH_TOKEN_KEY);
     return null;
   }
 };
 
-export const createUser = async (userData: NewUser): Promise<User> => {
-  const users = initializeUsers();
-  if (users.some(u => u.username.toLowerCase() === userData.username.toLowerCase())) {
-    return Promise.reject(new Error('Username already exists.'));
-  }
-  const newUser: User = {
-    ...userData,
-    id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-    password: userData.password,
-  };
-  users.push(newUser);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  return Promise.resolve(newUser);
+export const createUser = (userData: NewUser): Promise<User> => {
+    // The auth token will be sent automatically by api.ts's fetch wrapper
+    return apiFetch('/api/users', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+    });
 };
 
-export const getAllUsers = async (): Promise<User[]> => {
-  const users = initializeUsers();
-  // IMPORTANT: Never return passwords to the client, even in a simulation.
-  const usersWithoutPasswords = users.map(({ password, ...user }) => user);
-  // @ts-ignore
-  return Promise.resolve(usersWithoutPasswords);
-};
-
-export const changePassword = async (userId: number, currentPassword_plaintext: string, newPassword_plaintext: string): Promise<void> => {
-    let users = initializeUsers();
-    const userIndex = users.findIndex(u => u.id === userId);
-
-    if (userIndex === -1) {
-        return Promise.reject(new Error("User not found."));
-    }
-    if (users[userIndex].password !== currentPassword_plaintext) {
-        return Promise.reject(new Error("Current password is incorrect."));
-    }
-
-    users[userIndex].password = newPassword_plaintext;
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    return Promise.resolve();
+export const getAllUsers = (): Promise<User[]> => {
+    // The auth token will be sent automatically by api.ts's fetch wrapper
+    return apiFetch('/api/users');
 };

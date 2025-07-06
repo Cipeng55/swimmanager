@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link, Navigate } from 'react-router-dom';
 import { NewSwimmer, Swimmer, SelectOption } from '../types';
@@ -60,7 +59,7 @@ const SwimmerFormPage: React.FC = () => {
   useEffect(() => {
     if (isEditing && swimmerId && currentUser?.role === 'admin') { 
       setLoading(true);
-      getSwimmerById(parseInt(swimmerId))
+      getSwimmerById(swimmerId)
         .then(swimmer => {
           if (swimmer) {
             const dobString = typeof swimmer.dob === 'string' ? swimmer.dob : '';

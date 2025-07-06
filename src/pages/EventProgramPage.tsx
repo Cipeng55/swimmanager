@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom'; // Added useNavigate
 import { SwimEvent, SwimResult, Swimmer, RaceDefinition, SeededSwimmerInfo, Heat, LaneSwimmerDetails, EventProgramPrintData } from '../types';
@@ -53,26 +52,20 @@ const EventProgramPage: React.FC = () => {
     setError(null);
     setCustomOrderLoaded(false); 
     try {
-      const numericEventId = parseInt(eventIdParam);
-      if (isNaN(numericEventId)) {
-        setError("Invalid Event ID format.");
-        setLoading(false);
-        return;
-      }
       const [eventData, resultsData, swimmersData] = await Promise.all([
-        getEventById(numericEventId),
+        getEventById(eventIdParam),
         getResults(), 
         getSwimmers(),
       ]);
 
       if (!eventData) {
-        setError(`Event with ID ${numericEventId} not found.`);
+        setError(`Event with ID ${eventIdParam} not found.`);
         setEvent(null);
         setResults([]);
         setSwimmers([]);
       } else {
         setEvent(eventData);
-        const filteredResultsForEvent = resultsData.filter(r => r.eventId === numericEventId);
+        const filteredResultsForEvent = resultsData.filter(r => r.eventId === eventIdParam);
         setResults(filteredResultsForEvent);
         setSwimmers(swimmersData);
       }
@@ -142,8 +135,7 @@ const EventProgramPage: React.FC = () => {
     }
 
     const applyOrder = async () => {
-      const numericEventId = parseInt(eventIdParam!);
-      const customOrderedKeys = await getEventProgramOrder(numericEventId);
+      const customOrderedKeys = await getEventProgramOrder(event.id);
       let orderedRaces: RaceDefinition[] = [];
 
       if (customOrderedKeys) {
@@ -165,7 +157,7 @@ const EventProgramPage: React.FC = () => {
     
     applyOrder();
 
-  }, [initialUniqueRaces, event, eventIdParam, loading, customOrderLoaded, defaultRaceSort]);
+  }, [initialUniqueRaces, event, loading, customOrderLoaded, defaultRaceSort]);
 
 
   const getHeatsForRace = useCallback((race: RaceDefinition): Heat[] => {  
@@ -227,7 +219,7 @@ const EventProgramPage: React.FC = () => {
 
   const handleCloseEditLaneModal = () => { setIsEditLaneModalOpen(false); setEditingLaneSwimmerData(null); };
 
-  const handleSaveLaneResult = async (resultId: number, finalTime?: string, remarks?: string) => { 
+  const handleSaveLaneResult = async (resultId: string, finalTime?: string, remarks?: string) => { 
     if (!eventIdParam) return;
     try {
       await updateResult(resultId, { time: finalTime, remarks: remarks });

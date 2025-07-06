@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { SwimEvent, SwimResult, Swimmer, RaceResults, ResultEntry, ResultsBookPrintData } from '../types';
@@ -94,19 +93,18 @@ const EventResultsBookPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const numericEventId = parseInt(eventId);
-        if (isNaN(numericEventId)) {
+        if (isNaN(parseInt(eventId))) {
           throw new Error("Invalid Event ID format.");
         }
         
         const [eventData, resultsData, swimmersData] = await Promise.all([
-          getEventById(numericEventId),
+          getEventById(eventId),
           getResults(),
           getSwimmers(),
         ]);
 
         if (!eventData) {
-          throw new Error(`Event with ID ${numericEventId} not found.`);
+          throw new Error(`Event with ID ${eventId} not found.`);
         }
         
         setEvent(eventData);

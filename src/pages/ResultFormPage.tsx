@@ -45,7 +45,7 @@ interface RaceEntryState {
   inputValue: string;          // Text input: "This is the seed time I'm entering NOW"
   isAlreadyRegistered: boolean;  // Is there an existing SwimResult for this swimmer/event/race?
   existingSeedTimeDisplay: string | null; // If registered, what's the current seed time?
-  existingResultId?: number; // ID of the existing SwimResult record
+  existingResultId?: string; // ID of the existing SwimResult record
 }
 
 const ResultFormPage: React.FC = () => {
@@ -92,7 +92,7 @@ const ResultFormPage: React.FC = () => {
         setAllResults(resultsData); // Store all results
 
         if (isEditing && resultId) {
-          const result = resultsData.find(r => r.id === parseInt(resultId)); // Find from allResults
+          const result = resultsData.find(r => r.id === resultId); // Find from allResults
           if (result) {
             if (currentUser?.role === 'user' && result.createdByUserId !== currentUser.id) {
               setError('You are not authorized to edit this result.');
@@ -106,16 +106,14 @@ const ResultFormPage: React.FC = () => {
                 seedTime: result.seedTime === "99:99.99" ? "" : result.seedTime || '',
                 dateRecorded: result.dateRecorded.split('T')[0],
                 remarks: result.remarks || '',
-                // @ts-ignore
                 id: result.id, 
-                // @ts-ignore
                 createdByUserId: result.createdByUserId
             });
           } else {
             setError('Result not found.');
           }
         } else if (!isEditing) { 
-          let defaultSwimmerId: number | undefined = undefined;
+          let defaultSwimmerId: string | undefined = undefined;
           if (currentUser?.role === 'user') {
             const ownedSwimmers = swimmersData.filter(s => s.createdByUserId === currentUser.id);
             if (ownedSwimmers.length > 0) defaultSwimmerId = ownedSwimmers[0].id;
@@ -234,8 +232,7 @@ const ResultFormPage: React.FC = () => {
 
   const handleCommonChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const numValue = (name === 'swimmerId' || name === 'eventId') ? parseInt(value) : value;
-    setResultData(prev => ({ ...prev, [name]: numValue }));
+    setResultData(prev => ({ ...prev, [name]: value }));
     if (formErrors[name as keyof NewSwimResult]) {
       setFormErrors(prev => ({...prev, [name]: undefined}));
     }

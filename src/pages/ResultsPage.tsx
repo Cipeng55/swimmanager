@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
@@ -41,8 +40,8 @@ const ResultsPage: React.FC = () => {
         setResults(resultsData);
         setSwimmers(swimmersData);
         setEvents(eventsData);
-      } catch (err) {
-        setError('Failed to load data. Please try again.');
+      } catch (err: any) {
+        setError('Failed to load data. Please try again. ' + err.message);
         console.error(err);
       } finally {
         setLoading(false);
@@ -63,15 +62,15 @@ const ResultsPage: React.FC = () => {
         setResults(prevResults => prevResults.filter(r => r.id !== resultToDelete.id));
         setIsDeleteModalOpen(false);
         setResultToDelete(null);
-      } catch (err) {
-        setError(`Failed to delete result ID: ${resultToDelete.id}.`);
+      } catch (err: any) {
+        setError(`Failed to delete result ID: ${resultToDelete.id}. ${err.message}`);
         console.error(err);
       }
     }
   };
 
-  const getSwimmerName = (swimmerId: number): string => swimmers.find(s => s.id === swimmerId)?.name || 'Unknown Swimmer';
-  const getEventName = (eventId: number): string => events.find(e => e.id === eventId)?.name || 'Unknown Event';
+  const getSwimmerName = (swimmerId: string): string => swimmers.find(s => s.id === swimmerId)?.name || 'Unknown Swimmer';
+  const getEventName = (eventId: string): string => events.find(e => e.id === eventId)?.name || 'Unknown Event';
 
   const swimmerOptions: SelectOption[] = useMemo(() => [
     { value: '', label: 'All Swimmers' },
@@ -85,8 +84,8 @@ const ResultsPage: React.FC = () => {
 
   const filteredResults = useMemo(() => {
     return results.filter(result => {
-      const swimmerMatch = filterSwimmerId ? result.swimmerId === parseInt(filterSwimmerId) : true;
-      const eventMatch = filterEventId ? result.eventId === parseInt(filterEventId) : true;
+      const swimmerMatch = filterSwimmerId ? result.swimmerId === filterSwimmerId : true;
+      const eventMatch = filterEventId ? result.eventId === filterEventId : true;
       return swimmerMatch && eventMatch;
     });
   }, [results, filterSwimmerId, filterEventId]);

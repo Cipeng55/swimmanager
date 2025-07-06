@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { NewSwimEvent, SwimEvent, SelectOption, LetterCategory, LetterAgeRange } from '../types';
@@ -51,7 +50,7 @@ const EventFormPage: React.FC = () => {
   useEffect(() => {
     if (isEditing && eventId) {
       setLoading(true);
-      getEventById(parseInt(eventId))
+      getEventById(eventId)
         .then(event => {
           if (event) {
             const formattedEvent = { 
