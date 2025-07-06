@@ -73,11 +73,8 @@ const App: React.FC = () => {
           <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
           <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
           <Route path="/results" element={<ResultsPage />} />
-          <Route path="/club-starting-list" element={<ClubStartingListPage />} /> 
-        </Route>
-        
-        {/* User (Club) Only Routes for Swimmers and Results */}
-        <Route element={<PrivateRoute allowedRoles={['user']} />}>
+          <Route path="/club-starting-list" element={<ClubStartingListPage />} />
+          {/* Swimmer and Result Management */}
           <Route path="/swimmers" element={<SwimmersPage />} />
           <Route path="/swimmers/add" element={<SwimmerFormPage />} /> 
           <Route path="/swimmers/edit/:swimmerId" element={<SwimmerFormPage />} />
@@ -86,7 +83,7 @@ const App: React.FC = () => {
         </Route>
 
         {/* Admin (Event Organizer) Only Routes */}
-        <Route element={<PrivateRoute allowedRoles={['admin']} />}>
+        <Route element={<PrivateRoute allowedRoles={['admin', 'superadmin']} />}>
           <Route path="/events/add" element={<EventFormPage />} />
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
         </Route>

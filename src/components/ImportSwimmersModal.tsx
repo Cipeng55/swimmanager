@@ -1,9 +1,9 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import Modal from './common/Modal';
-import FormField from './common/FormField'; // Using FormField for file input styling consistency
 import { ImportFeedback, RowError } from '../types';
 import { ButtonSpinnerIcon } from './icons/ButtonSpinnerIcon';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ImportSwimmersModalProps {
   isOpen: boolean;
@@ -28,6 +28,8 @@ const ImportSwimmersModal: React.FC<ImportSwimmersModalProps> = ({
     status: 'idle',
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { currentUser } = useAuth();
+  const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -54,31 +56,23 @@ const ImportSwimmersModal: React.FC<ImportSwimmersModalProps> = ({
 
   const updateInternalFeedback = useCallback((update: Partial<ImportFeedback>) => {
     setFeedback(prev => {
-        // If update provides rowErrors, it's the complete list from SwimmersPage.
         const updatedRowErrors = update.rowErrors !== undefined ? update.rowErrors : prev.rowErrors;
-        // If update provides skippedCount, it's the complete count from SwimmersPage.
         const updatedSkippedCount = update.skippedCount !== undefined ? update.skippedCount : (prev.skippedCount || 0);
-        // If update provides successCount.
         const updatedSuccessCount = update.successCount !== undefined ? update.successCount : (prev.successCount || 0);
 
-
         return {
-            ...prev, // Keep previous generalError, status, etc., if not in update
-            ...update, // Apply other updates like status, generalError
+            ...prev,
+            ...update,
             successCount: updatedSuccessCount,
-            rowErrors: updatedRowErrors, // Use the new complete list
-            skippedCount: updatedSkippedCount, // Use the new complete count
+            rowErrors: updatedRowErrors,
+            skippedCount: updatedSkippedCount,
         };
     });
   }, []);
 
-
   const handleImport = async () => {
     if (!selectedFile) {
-      updateInternalFeedback({
-        generalError: 'Please select a CSV file to import.',
-        status: 'error',
-      });
+      updateInternalFeedback({ generalError: 'Please select a CSV file to import.', status: 'error' });
       return;
     }
 
@@ -106,43 +100,31 @@ const ImportSwimmersModal: React.FC<ImportSwimmersModalProps> = ({
         });
       } finally {
         setIsProcessing(false);
-        setFeedback(prev => ({
-            ...prev,
-            status: prev.status === 'processing' ? 'completed' : prev.status
-        }));
+        setFeedback(prev => ({ ...prev, status: prev.status === 'processing' ? 'completed' : prev.status }));
       }
     };
     reader.onerror = () => {
       setIsProcessing(false);
-      updateInternalFeedback({
-        generalError: 'Failed to read the file.',
-        status: 'error',
-        successCount: 0,
-        skippedCount: 0,
-        rowErrors: [],
-      });
+      updateInternalFeedback({ generalError: 'Failed to read the file.', status: 'error', successCount: 0, skippedCount: 0, rowErrors: [] });
     };
     reader.readAsText(selectedFile);
   };
 
-  const csvInstructions = `Name,DOB,Gender,Club,GradeLevel
-
+  const csvInstructions = `Name,DOB,Gender,${isAdminOrSuper ? 'Club,' : ''}GradeLevel
 - Name: Full name of the swimmer (Text)
 - DOB: Date of Birth in YYYY-MM-DD format (e.g., 2005-12-31)
 - Gender: Must be one of 'Male', 'Female', or 'Other'
-- Club: Name of the swimmer's club (Text)
-- GradeLevel (Optional): Swimmer's school grade (e.g., "SD Kelas 1", "SMA Kelas X")
+${isAdminOrSuper ? "- Club: Name of the swimmer's club (REQUIRED for your role)" : ''}
+- GradeLevel (Optional): Swimmer's school grade (e.g., "SD Kelas 1")
 
 Example:
 Name,DOB,Gender,Club,GradeLevel
 John Doe,2008-03-15,Male,Dolphins SC,SD Kelas 6
 Jane Smith,2009-07-22,Female,Sharks Club,SD Kelas 5
-Alex Lee,2007-01-10,Other,Water Warriors,SMP Kelas VII
 
 Important:
-- Required headers (case-insensitive): Name, DOB, Gender, Club.
-- Optional header (case-insensitive): GradeLevel.
-- Ensure data fields do not contain commas or newlines.
+- Required headers (case-insensitive): Name, DOB, Gender${isAdminOrSuper ? ', Club' : ''}.
+- The 'Club' column is ${isAdminOrSuper ? 'REQUIRED for your role.' : 'IGNORED for your role (your club is used automatically).'}
 - File must be UTF-8 encoded.`;
 
   return (

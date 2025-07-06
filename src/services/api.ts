@@ -1,3 +1,4 @@
+
 /**
  * @file This file provides an API service layer that communicates with the backend
  * serverless functions.
@@ -64,7 +65,7 @@ export const getSwimmers = (): Promise<Swimmer[]> => apiFetch('/api/swimmers');
 
 export const getSwimmerById = (id: string): Promise<Swimmer> => apiFetch(`/api/swimmers/${id}`);
 
-export const addSwimmer = (swimmerData: NewSwimmer): Promise<Swimmer> => {
+export const addSwimmer = (swimmerData: any): Promise<Swimmer> => {
     return apiFetch('/api/swimmers', {
         method: 'POST',
         body: JSON.stringify(swimmerData),

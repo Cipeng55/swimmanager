@@ -1,27 +1,30 @@
+
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
 import { EditIcon } from '../components/icons/EditIcon';
 import { DeleteIcon } from '../components/icons/DeleteIcon';
 import { UploadIcon } from '../components/icons/UploadIcon';
-import { Swimmer, NewSwimmer, ImportFeedback, RowError } from '../types';
-import { getSwimmers, deleteSwimmer as apiDeleteSwimmer, addSwimmer } from '../services/api';
+import { Swimmer, User, ImportFeedback, RowError } from '../types';
+import { getSwimmers, deleteSwimmer as apiDeleteSwimmer, addSwimmer, getAllUsers } from '../services/api';
 import { parseSwimmerCsv, ParsedSwimmerRow } from '../utils/csvParser';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
 import ImportSwimmersModal from '../components/ImportSwimmersModal';
-import { useAuth } from '../contexts/AuthContext'; // Import useAuth
-import { calculateAge } from '../utils/ageUtils'; // For displaying age based on current date
+import { useAuth } from '../contexts/AuthContext';
+import { calculateAge } from '../utils/ageUtils';
 
 const SwimmersPage: React.FC = () => {
   const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
+  const [allClubs, setAllClubs] = useState<User[]>([]); // For admin import
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [swimmerToDelete, setSwimmerToDelete] = useState<Swimmer | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth();
+  const isAdminOrSuper = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
   const fetchSwimmersData = async () => {
     setLoading(true);
@@ -29,6 +32,10 @@ const SwimmersPage: React.FC = () => {
     try {
       const data = await getSwimmers();
       setSwimmers(data);
+      if (isAdminOrSuper) {
+        const users = await getAllUsers();
+        setAllClubs(users.filter(u => u.role === 'user'));
+      }
     } catch (err) {
       setError('Failed to load swimmers. Please try again.');
       console.error(err);
@@ -38,8 +45,10 @@ const SwimmersPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchSwimmersData();
-  }, []);
+    if (currentUser) {
+      fetchSwimmersData();
+    }
+  }, [currentUser]);
 
   const handleDeleteClick = (swimmer: Swimmer) => {
     setSwimmerToDelete(swimmer);
@@ -61,7 +70,6 @@ const SwimmersPage: React.FC = () => {
   };
   
   const getDisplayAge = (dob: string): number => {
-    // Calculate age based on current date for display on this page
     const today = new Date().toISOString().split('T')[0];
     return calculateAge(dob, today);
   };
@@ -70,9 +78,12 @@ const SwimmersPage: React.FC = () => {
     fileContent: string,
     updateFeedback: (feedback: Partial<ImportFeedback>) => void
   ): Promise<void> => {
-    // This requires the user (club) to have a clubName in their profile
-    if (!currentUser?.clubName) {
+    if (currentUser?.role === 'user' && !currentUser?.clubName) {
       updateFeedback({ generalError: "Cannot import: Your account is not associated with a club name.", status: 'error' });
+      return;
+    }
+    if (isAdminOrSuper && allClubs.length === 0) {
+      updateFeedback({ generalError: "Cannot import: No club accounts exist in the system to assign swimmers to.", status: 'error' });
       return;
     }
 
@@ -93,6 +104,8 @@ const SwimmersPage: React.FC = () => {
     let currentRowErrors: RowError[] = [];
     updateFeedback({ status: 'processing', successCount: 0, skippedCount: 0, rowErrors: [], generalError: undefined });
 
+    const clubsMap = new Map(allClubs.map(c => [c.clubName?.toLowerCase(), c]));
+
     for (let i = 0; i < parsedData.length; i++) {
       const row = parsedData[i];
       const originalRowNumber = i + 2; 
@@ -100,16 +113,13 @@ const SwimmersPage: React.FC = () => {
       const name = row.Name?.trim();
       const dob = row.DOB?.trim();
       const genderInput = row.Gender?.trim();
-      const gradeLevel = row.GradeLevel?.trim() || undefined; // Get gradeLevel
+      const gradeLevel = row.GradeLevel?.trim() || undefined;
 
       if (!name) rowErrors.push('Name is missing.');
-      if (!dob) {
-          rowErrors.push('DOB is missing.');
-      } else if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || isNaN(new Date(dob).getTime())) {
-          rowErrors.push('DOB format is invalid (must be YYYY-MM-DD).');
-      }
+      if (!dob) rowErrors.push('DOB is missing.');
+      else if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || isNaN(new Date(dob).getTime())) rowErrors.push('DOB format is invalid (must be YYYY-MM-DD).');
       
-      let validGender: NewSwimmer['gender'] | null = null;
+      let validGender: Swimmer['gender'] | null = null;
       if (!genderInput) rowErrors.push('Gender is missing.');
       else { 
         const lowerGender = genderInput.toLowerCase();
@@ -119,22 +129,36 @@ const SwimmersPage: React.FC = () => {
         else rowErrors.push("Gender must be 'Male', 'Female', or 'Other'.");
       }
       
-      // Club name from CSV is now ignored, we use the logged-in user's club name.
+      let clubPayload = {};
+      if (isAdminOrSuper) {
+        const clubNameFromCsv = row.Club?.trim();
+        if (!clubNameFromCsv) {
+          rowErrors.push('Club column is required for your role and is missing.');
+        } else {
+          const clubUser = clubsMap.get(clubNameFromCsv.toLowerCase());
+          if (!clubUser) {
+            rowErrors.push(`Club '${clubNameFromCsv}' not found in system.`);
+          } else {
+            clubPayload = { clubUserId: clubUser.id };
+          }
+        }
+      }
 
       if (rowErrors.length > 0) {
         currentRowErrors.push({ rowNumber: originalRowNumber, rowData: Object.values(row).join(','), errors: rowErrors });
       } else {
         try {
-          const newSwimmerData: NewSwimmer = { 
+          const swimmerPayload = { 
             name: name!, 
             dob: dob!, 
             gender: validGender!, 
             gradeLevel: gradeLevel, 
+            ...clubPayload
           };
-          await addSwimmer(newSwimmerData);
+          await addSwimmer(swimmerPayload);
           currentSuccessCount++;
         } catch (addError: any) {
-          currentRowErrors.push({ rowNumber: originalRowNumber, rowData: Object.values(row).join(','), errors: [`API Error: ${addError.message || 'Failed to add swimmer'}`] });
+          currentRowErrors.push({ rowNumber: originalRowNumber, rowData: Object.values(row).join(','), errors: [`API Error: ${addError.message || 'Failed to add'}`] });
         }
       }
        updateFeedback({ successCount: currentSuccessCount, rowErrors: [...currentRowErrors], skippedCount: currentRowErrors.length });
@@ -143,28 +167,24 @@ const SwimmersPage: React.FC = () => {
     if (currentSuccessCount > 0) fetchSwimmersData();
   };
 
-  const canManageSwimmers = currentUser?.role === 'user';
+  const canManageSwimmers = currentUser?.role === 'user' || isAdminOrSuper;
   
   const canManageSwimmerRecord = (swimmer: Swimmer): boolean => {
     if (!currentUser) return false;
-    if (currentUser.role === 'superadmin') return true;
+    if (isAdminOrSuper) return true;
     if (currentUser.role === 'user' && swimmer.clubUserId === currentUser.id) return true;
     return false;
   };
 
-  if (loading && !isImportModalOpen) {
-    return <LoadingSpinner text="Loading swimmers..." />;
-  }
-  if (error && swimmers.length === 0 && !isImportModalOpen) {
-    return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
-  }
+  if (loading && !isImportModalOpen) return <LoadingSpinner text="Loading swimmers..." />;
+  if (error && swimmers.length === 0 && !isImportModalOpen) return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center">
         <div className='mb-4 sm:mb-0'>
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">My Club's Swimmers</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">View and manage your swimmer profiles.</p>
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Swimmers</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">View and manage swimmer profiles.</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 self-start sm:self-auto">
             {canManageSwimmers && (

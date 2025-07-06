@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
@@ -102,13 +103,16 @@ const ResultsPage: React.FC = () => {
   const canManageResult = (result: SwimResult): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'superadmin') return true;
-    if (currentUser.role === 'user' && result.createdByUserId === currentUser.id) return true;
     
     // An admin can manage results for events they created.
     if (currentUser.role === 'admin') {
       const resultEvent = events.find(e => e.id === result.eventId);
-      return resultEvent?.createdByAdminId === currentUser.id;
+      return !!resultEvent && resultEvent.createdByAdminId === currentUser.id;
     }
+    
+    // A user can manage results they created
+    if (currentUser.role === 'user' && result.createdByUserId === currentUser.id) return true;
+
     return false;
   };
 
@@ -121,7 +125,7 @@ const ResultsPage: React.FC = () => {
             Browse all recorded swim times.
           </p>
         </div>
-        {currentUser?.role === 'user' && (
+        {(currentUser?.role === 'user' || currentUser?.role === 'admin' || currentUser?.role === 'superadmin') && (
           <Link
             to="/results/add"
             className="bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ease-in-out flex items-center self-start sm:self-auto"
@@ -167,7 +171,7 @@ const ResultsPage: React.FC = () => {
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
             <p className="mb-2 text-xl">No results found for the current filters.</p>
             {results.length > 0 && <p>Try adjusting the filters or add new results.</p>}
-            {results.length === 0 && currentUser?.role === 'user' && <p>Click "Add Seed Times" to record one.</p>}
+            {results.length === 0 && currentUser?.role !== 'admin' && <p>Click "Add Seed Times" to record one.</p>}
           </div>
         ) : (
           <div className="overflow-x-auto">

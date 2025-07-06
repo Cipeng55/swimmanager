@@ -100,9 +100,8 @@ const EventFormPage: React.FC = () => {
     if (!eventData.location?.trim()) errors.location = 'Event location is required.';
     if (!eventData.lanesPerEvent) errors.lanesPerEvent = 'Number of lanes is required.';
     if (!eventData.categorySystem) errors.categorySystem = 'Category system is required.';
-    if (!eventData.authorizedUserIds || eventData.authorizedUserIds.length === 0) {
-      errors.authorizedUserIds = 'At least one club must be authorized to participate.';
-    }
+    
+    // Validation for authorizedUserIds is removed.
     
     // ... (rest of validation remains the same)
 
@@ -153,7 +152,7 @@ const EventFormPage: React.FC = () => {
         lanesPerEvent: eventData.lanesPerEvent || 8,
         categorySystem: eventData.categorySystem || 'KU',
         letterAgeRanges: eventData.letterAgeRanges, // This should be processed as before
-        authorizedUserIds: eventData.authorizedUserIds!,
+        authorizedUserIds: eventData.authorizedUserIds || [],
       };
 
       if (isEditing && 'id' in eventData && eventData.id) {
@@ -212,9 +211,9 @@ const EventFormPage: React.FC = () => {
 
         {/* --- Club Authorization Section --- */}
         <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-3">
-            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Authorize Clubs</h3>
+            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Authorize Clubs (Optional)</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-                Select which clubs are allowed to participate in this event.
+                Select which clubs are allowed to participate in this event. You can add them later by editing the event.
             </p>
             {formErrors.authorizedUserIds && <p className="text-sm text-red-600 dark:text-red-400">{formErrors.authorizedUserIds}</p>}
             {allClubs.length > 0 ? (

@@ -40,14 +40,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
         
         const { authorizedUserIds, ...eventDetails } = req.body;
-        if (!Array.isArray(authorizedUserIds) || authorizedUserIds.length === 0) {
-            return res.status(400).json({ message: 'At least one club (user) must be authorized.' });
-        }
-
+        
         const newEventData = { 
             ...eventDetails, 
             createdByAdminId: authData.userId,
-            authorizedUserIds: authorizedUserIds 
+            authorizedUserIds: authorizedUserIds || []
         };
         const result = await collection.insertOne(newEventData);
         const insertedEvent = { id: result.insertedId.toHexString(), ...newEventData };

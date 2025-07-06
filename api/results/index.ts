@@ -1,6 +1,8 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authData = verifyToken(req);
@@ -37,13 +39,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       case 'POST': {
-        if (authData.role !== 'user') {
-          return res.status(403).json({ message: 'Forbidden: Only users with role "user" (clubs) can submit results.' });
+        const { swimmerId } = req.body;
+        if (!swimmerId || !ObjectId.isValid(swimmerId)) {
+          return res.status(400).json({ message: "A valid swimmerId is required." });
         }
-        const swimmer = await db.collection('swimmers').findOne({ _id: req.body.swimmerId });
-        if (!swimmer || swimmer.clubUserId !== authData.userId) {
-            return res.status(403).json({ message: "Forbidden: You can only submit results for swimmers in your own club." });
+
+        // For users, validate they own the swimmer
+        if (authData.role === 'user') {
+          const swimmer = await db.collection('swimmers').findOne({ _id: new ObjectId(swimmerId) });
+          if (!swimmer || swimmer.clubUserId !== authData.userId) {
+              return res.status(403).json({ message: "Forbidden: You can only submit results for swimmers in your own club." });
+          }
         }
+        // For admins and superadmins, no ownership check is needed.
+
         const newResultData = { 
             ...req.body,
             createdByUserId: authData.userId,
