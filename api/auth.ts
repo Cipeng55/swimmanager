@@ -1,32 +1,23 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { connectToDatabase } from './_lib/mongodb.js';
 
-// WARNING: Using a default secret for development. This is insecure and should be
-// replaced with a strong, unique secret in a production environment by setting
-// the JWT_SECRET environment variable.
 const JWT_SECRET = process.env.JWT_SECRET || 'insecure-default-dev-secret-please-replace-in-production';
 
 /**
- * Handles login for regular users by connecting to the database.
- * The database connection module is imported dynamically to avoid breaking
- * the superadmin login if the DB module fails to load.
+ * Handles login for regular users (admin, user) by connecting to the database.
  */
 async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
-    // Dynamic import for database connection and ObjectId
-    const { connectToDatabase } = await import('./_lib/mongodb.js');
-    const { ObjectId } = await import('mongodb');
-
     const { username, password } = req.body;
 
     try {
         const { db } = await connectToDatabase();
         const usersCollection = db.collection('users');
-        const clubsCollection = db.collection('clubs');
 
         const user = await usersCollection.findOne({
             username: { $regex: new RegExp(`^${username}$`, 'i') },
-            role: { $ne: 'superadmin' }
         });
 
         if (!user) {
@@ -38,37 +29,31 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ message: 'Invalid username or password.' });
         }
 
-        let clubId: string | null = null;
-        let clubName: string | null = null;
-
-        // Both 'user' and 'admin' roles must have a club affiliation.
-        if (user.role === 'user' || user.role === 'admin') {
-            if (!user.clubId) {
-                return res.status(500).json({ message: `Data integrity error: ${user.role} is missing a club affiliation.` });
+        let displayClubName: string | null = null;
+        
+        if (user.role === 'user') {
+            if (!user.clubName) {
+                return res.status(500).json({ message: 'Data integrity error: This user account is missing a club name.' });
             }
-            
-            const club = await clubsCollection.findOne({ _id: new ObjectId(user.clubId) });
-            if (!club) {
-                return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
-            }
-            clubId = user.clubId.toHexString();
-            clubName = club.name;
+            displayClubName = user.clubName;
+        } else if (user.role === 'admin') {
+            displayClubName = 'Event Organizer'; // Display name for admins
         }
+        // Superadmin is handled separately and doesn't reach here.
 
         const payload = {
             userId: user._id.toHexString(),
             username: user.username,
             role: user.role,
-            clubId: clubId,
-            clubName: clubName,
+            // For a user, their own ID serves as their unique club identifier. Admins have no club.
+            clubId: user.role === 'user' ? user._id.toHexString() : null, 
+            clubName: displayClubName,
         };
         const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
         return res.status(200).json({ token });
+
     } catch (error: any) {
         console.error('Regular User Login API Error:', error);
-        if (error.code === 'ERR_MODULE_NOT_FOUND' || (error.message && error.message.includes('connect'))) {
-            return res.status(500).json({ message: 'Database connection failed.' });
-        }
         return res.status(500).json({ message: 'An internal error occurred during login.', error: error.message });
     }
 }
@@ -90,7 +75,7 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
                 userId: 'superadmin_static_id',
                 username: 'superadmin',
                 role: 'superadmin',
-                clubId: null,
+                clubId: null, // Superadmin is not a club
                 clubName: 'System Administration',
             };
             const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });

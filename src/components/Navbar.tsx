@@ -66,7 +66,7 @@ const Navbar: React.FC = () => {
                   </>
                 )}
                 <li><NavLink to="/club-starting-list" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Starting List</NavLink></li> 
-                {currentUser.role === 'superadmin' && (
+                {(currentUser.role === 'superadmin' || currentUser.role === 'admin') && (
                   <li><NavLink to="/users/manage" className={navLinkClass} onClick={()=>setIsOpen(false)}>Manage Accounts</NavLink></li>
                 )}
               </>

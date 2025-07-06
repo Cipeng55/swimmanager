@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, NewUserPayload, SelectOption } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,12 +17,18 @@ const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const [newUser, setNewUser] = useState<Partial<NewUserPayload>>({ username: '', password: '', role: 'user', clubName: '' });
+  const { currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'superadmin';
+  
+  const [newUser, setNewUser] = useState<Partial<NewUserPayload>>({
+    username: '', 
+    password: '', 
+    role: 'user', // Default to 'user', superadmin can change it
+    clubName: '' 
+  });
   
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { currentUser } = useAuth();
 
   const fetchData = async () => {
     setLoading(true);
@@ -38,12 +45,28 @@ const UserManagementPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Admins can only create users, so we enforce this in the state
+    if (!isSuperAdmin) {
+      setNewUser(prev => ({ ...prev, role: 'user' }));
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
 
   const handleNewUserChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewUser(prev => ({...prev, [name]: value}));
+    setNewUser(prev => {
+        const updated = {...prev, [name]: value};
+        // If superadmin changes role to 'admin', clear the clubName field
+        if (isSuperAdmin && name === 'role' && value === 'admin') {
+            updated.clubName = '';
+        }
+        return updated;
+    });
     if (formError) setFormError(null);
   };
   
@@ -78,15 +101,17 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  if (currentUser?.role !== 'superadmin') {
-    return <div className="text-center py-10 text-red-500">Access Denied. This page is for Superadmins only.</div>;
+  if (currentUser?.role !== 'superadmin' && currentUser?.role !== 'admin') {
+    return <div className="text-center py-10 text-red-500">Access Denied. This page is for Administrators only.</div>;
   }
   
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">User Account Management</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">Create and view user accounts.</p>
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100">Account Management</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300">
+            {isSuperAdmin ? "Create and view all user and admin accounts." : "Create new club accounts and view existing accounts."}
+          </p>
       </header>
 
       {error && <div className="mb-4 p-3 text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700 rounded-md">{error}</div>}
@@ -95,12 +120,16 @@ const UserManagementPage: React.FC = () => {
         {/* Create User Form */}
         <div className="lg:col-span-1">
           <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">Create New Account</h2>
+            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+              {isSuperAdmin ? 'Create New Account' : 'Create New Club Account'}
+            </h2>
             <form onSubmit={handleCreateUser} className="space-y-4">
                {formError && <div className="text-sm text-red-600 dark:text-red-400 p-2 bg-red-50 dark:bg-red-900 rounded-md">{formError}</div>}
                <FormField label="Username" id="username" name="username" type="text" value={newUser.username || ''} onChange={handleNewUserChange} required disabled={isSubmitting} />
                <FormField label="Password" id="password" name="password" type="password" value={newUser.password || ''} onChange={handleNewUserChange} required disabled={isSubmitting} />
-               <FormField label="Role" id="role" name="role" type="select" options={roleOptions} value={newUser.role || 'user'} onChange={handleNewUserChange} required disabled={isSubmitting} />
+               {isSuperAdmin && (
+                 <FormField label="Role" id="role" name="role" type="select" options={roleOptions} value={newUser.role || 'user'} onChange={handleNewUserChange} required disabled={isSubmitting} />
+               )}
                {newUser.role === 'user' && (
                  <FormField label="Club Name" id="clubName" name="clubName" type="text" value={newUser.clubName || ''} onChange={handleNewUserChange} required disabled={isSubmitting} />
                )}

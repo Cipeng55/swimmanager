@@ -91,8 +91,8 @@ const App: React.FC = () => {
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
         </Route>
 
-        {/* Super Admin Only Routes */}
-        <Route element={<PrivateRoute allowedRoles={['superadmin']} />}>
+        {/* Super Admin & Admin Routes */}
+        <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin']} />}>
           <Route path="/users/manage" element={<UserManagementPage />} />
         </Route>
         

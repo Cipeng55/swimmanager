@@ -14,7 +14,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        // Any authenticated user can get a list of users, but POST is restricted.
         if (!authData.authorized) {
             return res.status(401).json({ message: "Unauthorized" });
         }
@@ -33,28 +32,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'POST': {
-        // Only Superadmin can create new user accounts
-        if (!authData.authorized || authData.role !== 'superadmin') {
-            return res.status(403).json({ message: "Forbidden: You do not have permission to create user accounts." });
+        if (!authData.authorized) {
+            return res.status(401).json({ message: "Unauthorized" });
         }
 
         const { username, password, role, clubName } = req.body;
+        
+        // General validation
         if (!username || !password || !role) {
             return res.status(400).json({ message: 'Username, password, and role are required.' });
         }
+
+        // Permission check based on creator's role
+        if (authData.role === 'superadmin') {
+            if (role !== 'user' && role !== 'admin') {
+                return res.status(400).json({ message: 'Superadmin can only create roles "user" or "admin".' });
+            }
+        } else if (authData.role === 'admin') {
+            if (role !== 'user') {
+                return res.status(403).json({ message: 'Forbidden: Admins can only create accounts with the "user" role.' });
+            }
+        } else {
+            // 'user' role cannot create accounts
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to create user accounts.' });
+        }
+
         if (role === 'user' && (!clubName || clubName.trim() === '')) {
             return res.status(400).json({ message: 'Club Name is required for users with the "user" role.' });
-        }
-        if (role !== 'user' && role !== 'admin') {
-            return res.status(400).json({ message: 'Role must be either "user" or "admin".' });
         }
         
         const existingUser = await usersCollection.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
         if (existingUser) {
           return res.status(409).json({ message: 'Username already exists.' });
         }
+        
         const hashedPassword = await bcrypt.hash(password, 10);
-
         const newUserDocument: any = {
             username,
             password: hashedPassword,
@@ -68,7 +80,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const result = await usersCollection.insertOne(newUserDocument);
         const { password: _, ...userToReturn } = newUserDocument;
         return res.status(201).json({ id: result.insertedId.toHexString(), ...userToReturn });
-
       }
 
       default:
