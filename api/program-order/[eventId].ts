@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb';
 import { verifyToken } from '../_lib/auth';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authData = verifyToken(req);
@@ -11,23 +12,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { db } = await connectToDatabase();
   const { eventId } = req.query;
 
-  if (typeof eventId !== 'string') {
-    return res.status(400).json({ message: 'Event ID is required.' });
+  if (typeof eventId !== 'string' || !ObjectId.isValid(eventId)) {
+    return res.status(400).json({ message: 'Event ID must be a valid ObjectId string.' });
   }
   
   const programOrderCollection = db.collection('programOrders');
   const eventsCollection = db.collection('events');
 
-  // Verify the event belongs to the user's club before proceeding
-  const event = await eventsCollection.findOne({ _id: new (require('mongodb').ObjectId)(eventId), clubId: authData.clubId });
+  // Verify the event exists, respecting superadmin's global view
+  const eventQuery = authData.role === 'superadmin' 
+    ? { _id: new ObjectId(eventId) } 
+    : { _id: new ObjectId(eventId), clubId: authData.clubId };
+
+  const event = await eventsCollection.findOne(eventQuery);
   if (!event) {
       return res.status(404).json({ message: 'Event not found or not part of your club.' });
   }
 
+  // Define query for program order based on role
+  const orderQuery = authData.role === 'superadmin'
+    ? { eventId: eventId }
+    : { eventId: eventId, clubId: authData.clubId };
+
   try {
     switch (req.method) {
       case 'GET': {
-        const orderDoc = await programOrderCollection.findOne({ eventId: eventId, clubId: authData.clubId });
+        const orderDoc = await programOrderCollection.findOne(orderQuery);
         if (!orderDoc) {
           return res.status(200).json(null);
         }
@@ -35,16 +45,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'POST': {
-        if (authData.role !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Only admins can save program order.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can save program order.' });
         }
         const { orderedRaceKeys } = req.body;
         if (!Array.isArray(orderedRaceKeys)) {
             return res.status(400).json({ message: 'orderedRaceKeys must be an array.' });
         }
+
+        // Use the role-based query for the update, and ensure clubId is set correctly on upsert
         await programOrderCollection.updateOne(
-          { eventId: eventId, clubId: authData.clubId },
-          { $set: { orderedRaceKeys: orderedRaceKeys, clubId: authData.clubId } },
+          orderQuery,
+          { $set: { orderedRaceKeys: orderedRaceKeys, clubId: event.clubId } }, // Use the actual event's clubId
           { upsert: true }
         );
         return res.status(200).json({ message: 'Program order saved successfully' });

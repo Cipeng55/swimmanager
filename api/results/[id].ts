@@ -18,7 +18,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const objectId = new ObjectId(id);
   const collection = db.collection('results');
 
-  const query: any = { _id: objectId, clubId: authData.clubId };
+  const query = authData.role === 'superadmin' 
+    ? { _id: objectId }
+    : { _id: objectId, clubId: authData.clubId };
   
   try {
     switch (req.method) {
@@ -36,9 +38,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!existingResult) {
             return res.status(404).json({ message: 'Result not found or not part of your club' });
         }
-        // Admin can edit any result in their club, users can only edit their own
-        if (authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
-            return res.status(403).json({ message: 'Forbidden: You can only edit results you created.' });
+        
+        if (authData.role !== 'superadmin' && authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this result.' });
         }
         
         const resultData = req.body;
@@ -56,9 +58,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!existingResult) {
             return res.status(404).json({ message: 'Result not found or not part of your club' });
         }
-        // Admin can delete any result in their club, users can only delete their own
-        if (authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
-            return res.status(403).json({ message: 'Forbidden: You can only delete results you created.' });
+
+        if (authData.role !== 'superadmin' && authData.role !== 'admin' && existingResult.createdByUserId !== authData.userId) {
+            return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this result.' });
         }
 
         const deleteResult = await collection.deleteOne(query);

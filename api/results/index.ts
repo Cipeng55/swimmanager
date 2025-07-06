@@ -14,7 +14,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        const results = await collection.find({ clubId: authData.clubId }).sort({ dateRecorded: -1 }).toArray();
+        const query = authData.role === 'superadmin' ? {} : { clubId: authData.clubId };
+        const results = await collection.find(query).sort({ dateRecorded: -1 }).toArray();
         const transformedResults = results.map(result => {
           const { _id, ...rest } = result;
           return { id: _id.toHexString(), ...rest };

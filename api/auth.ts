@@ -15,8 +15,8 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: 'Username and password are required.' });
     }
 
-    // Hardcoded superadmin check
-    if (username === 'superadmin') {
+    // Hardcoded superadmin check (case-insensitive)
+    if (username.toLowerCase() === 'superadmin') {
         if (password === 'Cipeng55') {
             const payload = {
                 userId: 'superadmin_static_id', // Static ID for the hardcoded superadmin
@@ -34,45 +34,45 @@ async function handleLogin(req: VercelRequest, res: VercelResponse) {
     }
 
     // Regular user login logic
-    const { db } = await connectToDatabase();
-    const usersCollection = db.collection('users');
-    const clubsCollection = db.collection('clubs');
-    
     try {
-      // Find user, but exclude any 'superadmin' user from the DB to avoid conflicts.
-      const user = await usersCollection.findOne({ 
-          username: { $regex: new RegExp(`^${username}$`, 'i') },
-          role: { $ne: 'superadmin' } // Do not allow login to db-based superadmins
-      });
+        const { db } = await connectToDatabase();
+        const usersCollection = db.collection('users');
+        const clubsCollection = db.collection('clubs');
+        
+        // Find user, but exclude any 'superadmin' user from the DB to avoid conflicts.
+        const user = await usersCollection.findOne({ 
+            username: { $regex: new RegExp(`^${username}$`, 'i') },
+            role: { $ne: 'superadmin' } // Do not allow login to db-based superadmins
+        });
 
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid username or password.' });
-      }
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ message: 'Invalid username or password.' });
-      }
-      
-      if (!user.clubId) {
-          // This should not happen for admin/user roles based on creation logic.
-          return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
-      }
-      const club = await clubsCollection.findOne({ _id: new (require('mongodb').ObjectId)(user.clubId) });
-      if (!club) {
-          return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
-      }
-      const clubName = club.name;
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+        
+        if (!user.clubId) {
+            // This should not happen for admin/user roles based on creation logic.
+            return res.status(500).json({ message: 'Data integrity error: User is missing a club affiliation.' });
+        }
+        const club = await clubsCollection.findOne({ _id: new (require('mongodb').ObjectId)(user.clubId) });
+        if (!club) {
+            return res.status(500).json({ message: 'Internal Server Error: Associated club not found.' });
+        }
+        const clubName = club.name;
 
-      const payload = {
-        userId: user._id.toHexString(),
-        username: user.username,
-        role: user.role,
-        clubId: user.clubId.toHexString(), // clubId should exist here
-        clubName: clubName,
-      };
-      const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
-      return res.status(200).json({ token });
+        const payload = {
+            userId: user._id.toHexString(),
+            username: user.username,
+            role: user.role,
+            clubId: user.clubId.toHexString(), // clubId should exist here
+            clubName: clubName,
+        };
+        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+        return res.status(200).json({ token });
     } catch (error: any) {
       console.error('Login API Error:', error);
       return res.status(500).json({ message: 'Internal Server Error', error: error.message });

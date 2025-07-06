@@ -19,7 +19,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const swimmersCollection = db.collection('swimmers');
   const resultsCollection = db.collection('results');
 
-  const query = { _id: objectId, clubId: authData.clubId };
+  const query = authData.role === 'superadmin' 
+    ? { _id: objectId }
+    : { _id: objectId, clubId: authData.clubId };
 
   try {
     switch (req.method) {
@@ -33,8 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'PUT': {
-        if (authData.role !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Only admins can update swimmers.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can update swimmers.' });
         }
         const swimmerData = req.body;
         delete swimmerData.clubId; // Prevent changing clubId
@@ -47,18 +49,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        if (authData.role !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Only admins can delete swimmers.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can delete swimmers.' });
         }
         
-        // Ensure swimmer exists and belongs to the club before deleting
+        // Ensure swimmer exists before deleting
         const swimmerToDelete = await swimmersCollection.findOne(query);
         if (!swimmerToDelete) {
              return res.status(404).json({ message: 'Swimmer not found or not part of your club' });
         }
 
         // Cascade delete associated results
-        await resultsCollection.deleteMany({ swimmerId: id, clubId: authData.clubId });
+        await resultsCollection.deleteMany({ swimmerId: id });
         
         const result = await swimmersCollection.deleteOne(query);
         if (result.deletedCount === 0) {

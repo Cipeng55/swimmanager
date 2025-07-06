@@ -20,7 +20,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const resultsCollection = db.collection('results');
   const programOrderCollection = db.collection('programOrders');
 
-  const query = { _id: objectId, clubId: authData.clubId };
+  const query = authData.role === 'superadmin' 
+    ? { _id: objectId }
+    : { _id: objectId, clubId: authData.clubId };
 
   try {
     switch (req.method) {
@@ -34,8 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'PUT': {
-        if (authData.role !== 'admin') {
-          return res.status(403).json({ message: 'Forbidden: Only admins can update events.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+          return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can update events.' });
         }
         const eventData = req.body;
         // Ensure clubId isn't overwritten
@@ -48,8 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        if (authData.role !== 'admin') {
-          return res.status(403).json({ message: 'Forbidden: Only admins can delete events.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+          return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can delete events.' });
         }
         const eventToDelete = await eventsCollection.findOne(query);
         if (!eventToDelete) {
@@ -57,8 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Cascade delete using event ID string
-        await resultsCollection.deleteMany({ eventId: id, clubId: authData.clubId });
-        await programOrderCollection.deleteOne({ eventId: id, clubId: authData.clubId });
+        await resultsCollection.deleteMany({ eventId: id }); // Superadmin can delete results from any club for this event
+        await programOrderCollection.deleteOne({ eventId: id }); // Superadmin can delete program order from any club for this event
         const result = await eventsCollection.deleteOne(query);
 
         if (result.deletedCount === 0) {
