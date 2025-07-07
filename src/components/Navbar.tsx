@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { WaterPoloIcon } from './icons/WaterPoloIcon';
+import { SwimmingIcon } from './icons/SwimmingIcon';
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
 const Navbar: React.FC = () => {
@@ -26,8 +25,8 @@ const Navbar: React.FC = () => {
   return (
     <nav className="bg-white border-gray-200 px-2 sm:px-4 py-2.5 shadow-md dark:bg-gray-800">
       <div className="container flex flex-wrap justify-between items-center mx-auto">
-        <NavLink to="/dashboard" className="flex items-center">
-          <WaterPoloIcon className="h-8 w-8 mr-3 text-primary" />
+        <NavLink to="/" className="flex items-center">
+          <SwimmingIcon className="h-8 w-8 mr-3 text-primary" />
           <div className="flex flex-col">
             <span className="self-center text-xl font-semibold whitespace-nowrap text-gray-800 dark:text-white">
               Swim Manager

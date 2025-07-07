@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -12,6 +11,7 @@ import ResultFormPage from './pages/ResultFormPage';
 import EventProgramPage from './pages/EventProgramPage';
 import EventResultsBookPage from './pages/EventResultsBookPage';
 import LoginPage from './pages/LoginPage'; 
+import LandingPage from './pages/LandingPage';
 import UserManagementPage from './pages/UserManagementPage'; 
 import PrivateRoute from './components/common/PrivateRoute'; 
 import { useAuth } from './contexts/AuthContext'; 
@@ -52,14 +52,11 @@ const App: React.FC = () => {
   return (
     <Routes>
       {/* Standalone routes that don't use the main app layout */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       {/* All other routes are nested under MainAppLayout to get the common navbar/footer */}
       <Route element={<MainAppLayout />}>
-        <Route 
-          path="/" 
-          element={currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} 
-        />
 
         {/* Print Routes - they use the layout component, which handles their special case */}
         <Route path="/events/:eventId/program/print" element={<PrintableEventProgram />} />
@@ -93,7 +90,7 @@ const App: React.FC = () => {
           <Route path="/users/manage" element={<UserManagementPage />} />
         </Route>
         
-        <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={currentUser ? "/dashboard" : "/"} replace />} />
       </Route>
     </Routes>
   );

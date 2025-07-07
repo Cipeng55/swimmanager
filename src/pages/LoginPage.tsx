@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
-import { WaterPoloIcon } from '../components/icons/WaterPoloIcon';
+import { SwimmingIcon } from '../components/icons/SwimmingIcon';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -36,7 +36,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
       <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 space-y-6">
         <div className="text-center">
-            <WaterPoloIcon className="mx-auto h-12 w-12 text-primary" />
+            <SwimmingIcon className="mx-auto h-12 w-12 text-primary" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Welcome Back</h1>
             <p className="text-gray-600 dark:text-gray-300">Sign in to your Swim Manager account</p>
         </div>
@@ -84,6 +84,11 @@ const LoginPage: React.FC = () => {
          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             <p>
                 Don't have an account? Contact your administrator.
+            </p>
+            <p className="mt-2">
+                <Link to="/" className="font-medium text-primary hover:text-primary-dark">
+                    &larr; Back to Home Page
+                </Link>
             </p>
          </div>
       </div>
