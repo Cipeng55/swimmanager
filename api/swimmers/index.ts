@@ -19,8 +19,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let query: any = {};
         if (authData.role === 'user' && authData.userId) {
           query.clubUserId = authData.userId;
+        } else if (authData.role === 'admin' && authData.userId) {
+          // Admin should only see swimmers from clubs they created (tenant isolation).
+          const usersCollection = db.collection('users');
+          const createdClubs = await usersCollection.find({
+            role: 'user',
+            createdByAdminId: authData.userId
+          }).project({ _id: 1 }).toArray();
+
+          const clubUserIds = createdClubs.map(club => club._id.toHexString());
+          
+          if (clubUserIds.length > 0) {
+            query.clubUserId = { $in: clubUserIds };
+          } else {
+            // If admin has created no clubs, they should see no swimmers.
+            return res.status(200).json([]);
+          }
         }
-        // Admins and Superadmins can see all swimmers (empty query)
+        // Superadmin falls through with an empty query to get all swimmers.
         
         const swimmers = await collection.find(query).sort({ name: 1 }).toArray();
         const transformedSwimmers = swimmers.map(swimmer => {
