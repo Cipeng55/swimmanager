@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -19,7 +20,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (authData.role === 'admin') {
             query.createdByAdminId = authData.userId;
         } else if (authData.role === 'user') {
-            query.authorizedUserIds = authData.userId;
+            // A user sees events they are manually authorized for,
+            // OR events created by the admin who created their account.
+            const usersCollection = db.collection('users');
+            const userAccount = await usersCollection.findOne({ _id: new ObjectId(authData.userId) });
+            const parentAdminId = userAccount?.createdByAdminId;
+
+            const orConditions = [{ authorizedUserIds: authData.userId }];
+
+            if (parentAdminId) {
+                orConditions.push({ createdByAdminId: parentAdminId });
+            }
+
+            query = { $or: orConditions };
         }
         // Superadmin gets all events (empty query)
 
@@ -39,12 +52,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              return res.status(400).json({ message: 'Authentication error: Admin user ID not found.' });
         }
         
-        const { authorizedUserIds, ...eventDetails } = req.body;
+        const eventDetails = req.body;
         
         const newEventData = { 
             ...eventDetails, 
             createdByAdminId: authData.userId,
-            authorizedUserIds: authorizedUserIds || []
+            authorizedUserIds: eventDetails.authorizedUserIds || []
         };
         const result = await collection.insertOne(newEventData);
         const insertedEvent = { id: result.insertedId.toHexString(), ...newEventData };
