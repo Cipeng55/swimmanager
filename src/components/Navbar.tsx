@@ -57,7 +57,9 @@ const Navbar: React.FC = () => {
             {!isLoadingAuth && currentUser && (
               <>
                 <li><NavLink to="/dashboard" className={navLinkClass} onClick={()=>setIsOpen(false)} end>Dashboard</NavLink></li>
-                <li><NavLink to="/events" className={navLinkClass} onClick={()=>setIsOpen(false)}>Events</NavLink></li>
+                {(currentUser.role === 'superadmin' || currentUser.role === 'admin') && (
+                  <li><NavLink to="/events" className={navLinkClass} onClick={()=>setIsOpen(false)}>Events</NavLink></li>
+                )}
                 <li><NavLink to="/swimmers" className={navLinkClass} onClick={()=>setIsOpen(false)}>Swimmers</NavLink></li>
                 <li><NavLink to="/results" className={navLinkClass} onClick={()=>setIsOpen(false)}>Results</NavLink></li>
                 <li><NavLink to="/club-starting-list" className={navLinkClass} onClick={()=>setIsOpen(false)}>Club Starting List</NavLink></li> 

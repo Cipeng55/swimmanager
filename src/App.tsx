@@ -66,7 +66,6 @@ const App: React.FC = () => {
         {/* Protected Routes - Accessible by all roles */}
         <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin', 'user']} />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
           <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
           <Route path="/results" element={<ResultsPage />} />
@@ -81,6 +80,7 @@ const App: React.FC = () => {
 
         {/* Admin (Event Organizer) Only Routes */}
         <Route element={<PrivateRoute allowedRoles={['admin', 'superadmin']} />}>
+          <Route path="/events" element={<EventsPage />} />
           <Route path="/events/add" element={<EventFormPage />} />
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
         </Route>
