@@ -24,12 +24,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ message: 'Event not found.' });
   }
 
-  // Permission check
-  const isSuperAdmin = authData.role === 'superadmin';
-  const isAdminCreator = authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId;
-  const isAuthorizedUser = authData.role === 'user' && event.authorizedUserIds?.includes(authData.userId);
+  // Comprehensive Permission Check
+  let hasPermission = false;
+  if (authData.role === 'superadmin') {
+      hasPermission = true;
+  } else if (authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId) {
+      hasPermission = true;
+  } else if (authData.role === 'user') {
+      // 1. Check for explicit permission first
+      if (event.authorizedUserIds && Array.isArray(event.authorizedUserIds) && event.authorizedUserIds.includes(authData.userId)) {
+          hasPermission = true;
+      } 
+      // 2. If no explicit list, check for implicit permission (created by the same admin)
+      else if (!event.authorizedUserIds || event.authorizedUserIds.length === 0) {
+          const usersCollection = db.collection('users');
+          const userAccount = await usersCollection.findOne({ _id: new ObjectId(authData.userId) });
+          // Check if the user's creator admin matches the event's creator admin
+          if (userAccount?.createdByAdminId?.toString() === event.createdByAdminId?.toString()) {
+              hasPermission = true;
+          }
+      }
+  }
 
-  if (!isSuperAdmin && !isAdminCreator && !isAuthorizedUser) {
+  if (!hasPermission) {
     return res.status(403).json({ message: 'Forbidden: You do not have permission to access the program order for this event.' });
   }
   
@@ -46,7 +63,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'POST': {
-        if (!isSuperAdmin && !isAdminCreator) {
+        // Only admins who created the event or superadmins can save/update the order
+        const canModify = authData.role === 'superadmin' || (authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId);
+        if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: Only the creating admin or superadmin can save program order.' });
         }
         const { orderedRaceKeys } = req.body;
