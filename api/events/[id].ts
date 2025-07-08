@@ -26,12 +26,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Permission check
-  const isSuperAdmin = authData.role === 'superadmin';
-  const isAdminCreator = authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId;
-  const isAuthorizedUser = authData.role === 'user' && event.authorizedUserIds?.includes(authData.userId);
+  let hasPermission = false;
+  if (authData.role === 'superadmin') {
+      hasPermission = true;
+  } else if (authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId) {
+      hasPermission = true;
+  } else if (authData.role === 'user') {
+      // Check for explicit permission first
+      if (event.authorizedUserIds && Array.isArray(event.authorizedUserIds) && event.authorizedUserIds.includes(authData.userId)) {
+          hasPermission = true;
+      } 
+      // If no explicit list, check for implicit permission (created by the same admin)
+      else if (!event.authorizedUserIds || event.authorizedUserIds.length === 0) {
+          const usersCollection = db.collection('users');
+          const userAccount = await usersCollection.findOne({ _id: new ObjectId(authData.userId) });
+          if (userAccount?.createdByAdminId?.toString() === event.createdByAdminId?.toString()) {
+              hasPermission = true;
+          }
+      }
+  }
 
-  if (!isSuperAdmin && !isAdminCreator && !isAuthorizedUser) {
-    return res.status(403).json({ message: 'Forbidden: You do not have permission to access this event.' });
+  if (!hasPermission) {
+      return res.status(403).json({ message: 'Forbidden: You do not have permission to access this event.' });
   }
 
   try {
@@ -42,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'PUT': {
-        if (!isSuperAdmin && !isAdminCreator) {
+        if (authData.role !== 'superadmin' && (authData.role !== 'admin' || event.createdByAdminId?.toString() !== authData.userId)) {
           return res.status(403).json({ message: 'Forbidden: Only the creating admin or superadmin can update events.' });
         }
         const eventData = req.body;
@@ -56,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        if (!isSuperAdmin && !isAdminCreator) {
+        if (authData.role !== 'superadmin' && (authData.role !== 'admin' || event.createdByAdminId?.toString() !== authData.userId)) {
           return res.status(403).json({ message: 'Forbidden: Only the creating admin or superadmin can delete events.' });
         }
         

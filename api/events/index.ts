@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -18,23 +17,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'GET': {
         let query: any = {};
         if (authData.role === 'admin') {
+            // Admins see events they created
             query.createdByAdminId = authData.userId;
         } else if (authData.role === 'user') {
-            // A user sees events they are manually authorized for,
-            // OR events created by the admin who created their account.
             const usersCollection = db.collection('users');
             const userAccount = await usersCollection.findOne({ _id: new ObjectId(authData.userId) });
             const parentAdminId = userAccount?.createdByAdminId;
 
-            const orConditions = [{ authorizedUserIds: authData.userId }];
+            const orConditions: any[] = [
+                // Condition 1: User is explicitly authorized for the event
+                { authorizedUserIds: authData.userId }
+            ];
 
+            // Condition 2: Event has no explicit authorization list AND was created by the user's parent admin
             if (parentAdminId) {
-                orConditions.push({ createdByAdminId: parentAdminId });
+                orConditions.push({
+                    createdByAdminId: parentAdminId.toString(),
+                    $or: [
+                        { authorizedUserIds: { $exists: false } },
+                        { authorizedUserIds: { $eq: [] } },
+                        { authorizedUserIds: { $size: 0 } }
+                    ]
+                });
             }
-
             query = { $or: orConditions };
         }
-        // Superadmin gets all events (empty query)
+        // Superadmin gets all events (empty query falls through)
 
         const events = await collection.find(query).sort({ date: -1 }).toArray();
         const transformedEvents = events.map(event => {
@@ -45,8 +53,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       case 'POST': {
-        if (authData.role !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Only admins can create events.' });
+        if (authData.role !== 'admin' && authData.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Forbidden: Only admins or superadmins can create events.' });
         }
         if (!authData.userId) {
              return res.status(400).json({ message: 'Authentication error: Admin user ID not found.' });
@@ -57,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const newEventData = { 
             ...eventDetails, 
             createdByAdminId: authData.userId,
-            authorizedUserIds: eventDetails.authorizedUserIds || []
+            authorizedUserIds: eventDetails.authorizedUserIds || [] // Ensure this field is saved
         };
         const result = await collection.insertOne(newEventData);
         const insertedEvent = { id: result.insertedId.toHexString(), ...newEventData };

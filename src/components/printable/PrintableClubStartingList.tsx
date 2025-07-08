@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ClubStartingListPrintData, SwimEvent, RaceDefinition, SeededSwimmerInfo, Swimmer, SwimResult, ClubRaceInfo, ClubStartingListInfo } from '../../types';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { getEvents, getSwimmers, getResults, getEventProgramOrder } from '../../services/api';
+import { getEventById, getSwimmers, getResults, getEventProgramOrder } from '../../services/api';
 import { generateHeats } from '../../utils/seedingUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../../utils/ageUtils';
 import { timeToMilliseconds } from '../../utils/timeUtils';
@@ -51,13 +51,12 @@ const PrintableClubStartingList: React.FC = () => {
     setError(null);
 
     try {
-        const [allEvents, allSwimmers, allResults] = await Promise.all([
-            getEvents(),
+        const [eventDetails, allSwimmers, allResults] = await Promise.all([
+            getEventById(eventId),
             getSwimmers(),
             getResults()
         ]);
         
-        const eventDetails = allEvents.find(e => e.id === eventId);
         if (!eventDetails) throw new Error("Event not found.");
 
         const eventResults = allResults.filter(r => r.eventId === eventId);

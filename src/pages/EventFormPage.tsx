@@ -101,9 +101,31 @@ const EventFormPage: React.FC = () => {
     if (!eventData.lanesPerEvent) errors.lanesPerEvent = 'Number of lanes is required.';
     if (!eventData.categorySystem) errors.categorySystem = 'Category system is required.';
     
-    // Validation for authorizedUserIds is removed.
+    // Validation for authorizedUserIds is removed as it's optional.
     
-    // ... (rest of validation remains the same)
+    if (eventData.categorySystem === 'LETTER') {
+      let isAnyLetterRangeFilled = false;
+      let hasError = false;
+      for (const letter of letterCategories) {
+        const range = letterDOBRangesInput[letter];
+        if (range && (range.startDate || range.endDate)) {
+          isAnyLetterRangeFilled = true;
+          if (!range.startDate || !range.endDate) {
+            errors.letterAgeRanges = `Both start and end date are required for Category ${letter}.`;
+            hasError = true;
+            break; 
+          }
+        }
+      }
+      if (!isAnyLetterRangeFilled) {
+         errors.letterAgeRanges = 'At least one letter category date range must be defined for the Letter System.';
+         hasError = true;
+      }
+      if (hasError) {
+        setFormErrors(errors);
+        return false;
+      }
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -131,7 +153,14 @@ const EventFormPage: React.FC = () => {
   };
 
   const handleLetterDOBRangeChange = (letter: LetterCategory, type: 'startDate' | 'endDate', value: string) => {
-    // ... (this function remains the same)
+    setLetterDOBRangesInput(prev => ({
+      ...prev,
+      [letter]: {
+        ...prev[letter],
+        [type]: value,
+      },
+    }));
+    if (formErrors.letterAgeRanges) setFormErrors(prev => ({...prev, letterAgeRanges: undefined}));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,7 +170,19 @@ const EventFormPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // ... (letter age range processing remains the same)
+    let processedLetterAgeRanges: Partial<Record<LetterCategory, LetterAgeRange>> | undefined;
+    if (eventData.categorySystem === 'LETTER') {
+      processedLetterAgeRanges = {};
+      for (const letter of letterCategories) {
+        const range = letterDOBRangesInput[letter];
+        if (range && range.startDate && range.endDate) {
+          processedLetterAgeRanges[letter] = {
+            startDate: range.startDate,
+            endDate: range.endDate,
+          };
+        }
+      }
+    }
 
     try {
       const payload: NewSwimEvent = {
@@ -151,7 +192,7 @@ const EventFormPage: React.FC = () => {
         description: eventData.description,
         lanesPerEvent: eventData.lanesPerEvent || 8,
         categorySystem: eventData.categorySystem || 'KU',
-        letterAgeRanges: eventData.letterAgeRanges, // This should be processed as before
+        letterAgeRanges: processedLetterAgeRanges,
         authorizedUserIds: eventData.authorizedUserIds || [],
       };
 
@@ -169,7 +210,7 @@ const EventFormPage: React.FC = () => {
     }
   };
 
-  if (loading) { 
+  if (loading && !eventData.name) { 
     return <LoadingSpinner text="Loading event form..." />;
   }
 
@@ -213,7 +254,7 @@ const EventFormPage: React.FC = () => {
         <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-3">
             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Authorize Clubs (Optional)</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-                Select which clubs are allowed to participate in this event. You can add them later by editing the event.
+                Select which clubs can participate. If none are selected, only clubs created by you can join.
             </p>
             {formErrors.authorizedUserIds && <p className="text-sm text-red-600 dark:text-red-400">{formErrors.authorizedUserIds}</p>}
             {allClubs.length > 0 ? (
@@ -239,7 +280,38 @@ const EventFormPage: React.FC = () => {
             )}
         </div>
         
-        {/* ... (letter DOB range section remains same) */}
+        {eventData.categorySystem === 'LETTER' && (
+          <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-3">
+            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Letter Category Date of Birth Ranges</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Define the DOB range for each letter category. Swimmers will be automatically assigned based on their DOB.</p>
+            {formErrors.letterAgeRanges && <p className="text-sm text-red-600 dark:text-red-400">{formErrors.letterAgeRanges}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+              {letterCategories.map(letter => (
+                <div key={letter}>
+                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">Category {letter}</p>
+                   <FormField
+                      label="Start Date"
+                      id={`start-date-${letter}`}
+                      type="date"
+                      value={letterDOBRangesInput[letter]?.startDate || ''}
+                      onChange={(e) => handleLetterDOBRangeChange(letter, 'startDate', e.target.value)}
+                      containerClassName="mb-2"
+                      disabled={loading}
+                    />
+                    <FormField
+                      label="End Date"
+                      id={`end-date-${letter}`}
+                      type="date"
+                      value={letterDOBRangesInput[letter]?.endDate || ''}
+                      onChange={(e) => handleLetterDOBRangeChange(letter, 'endDate', e.target.value)}
+                       containerClassName="mb-0"
+                       disabled={loading}
+                    />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <FormField
           label="Description (Optional)" id="description" name="description" type="textarea"
