@@ -48,7 +48,13 @@ const ClubStartingListPage: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                const [eventsData, swimmersData, resultsData, usersData] = await Promise.all([getEvents(), getSwimmers(), getResults(), getAllUsers()]);
+                const [eventsData, swimmersData, resultsData] = await Promise.all([getEvents(), getSwimmers(), getResults()]);
+                
+                let usersData: User[] = [];
+                if (currentUser?.role === 'admin' || currentUser?.role === 'superadmin') {
+                    usersData = await getAllUsers();
+                }
+
                 setEvents(eventsData);
                 setSwimmers(swimmersData);
                 setResults(resultsData);
@@ -59,9 +65,11 @@ const ClubStartingListPage: React.FC = () => {
                 if (eventsData.length > 0) {
                     setSelectedEventId(eventsData[0].id.toString());
                 }
-                // For a user (club), automatically select their own club.
+                
                 if (currentUser?.role === 'user') {
                     setSelectedClubUserId(currentUser.id);
+                } else {
+                    setSelectedClubUserId('ALL_CLUBS');
                 }
             } catch (err: any) {
                 setError(err.message || 'Failed to load initial data.');
@@ -69,19 +77,22 @@ const ClubStartingListPage: React.FC = () => {
                 setLoading(false);
             }
         };
-        loadInitialData();
+        if (currentUser) {
+            loadInitialData();
+        }
     }, [currentUser]);
 
     const eventOptions = useMemo(() => events.map(e => ({ value: e.id, label: `${e.name} (${new Date(e.date).toLocaleDateString()})` })), [events]);
     
     const clubOptions = useMemo(() => {
         if (!currentUser) return [];
+
+        if (currentUser.role === 'user') {
+            return [{ value: currentUser.id, label: currentUser.clubName }];
+        }
         
         const options: SelectOption[] = allClubs.map(c => ({ value: c.id, label: c.clubName! }));
-
-        if (currentUser.role === 'superadmin' || currentUser.role === 'admin') {
-            options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs' });
-        }
+        options.unshift({ value: 'ALL_CLUBS', label: 'All Clubs' });
         
         return options;
     }, [allClubs, currentUser]);
@@ -100,7 +111,8 @@ const ClubStartingListPage: React.FC = () => {
                 if (!eventDetails) throw new Error("Selected event not found.");
 
                 const selectedClub = allClubs.find(c => c.id === selectedClubUserId);
-                const selectedClubName = selectedClub ? selectedClub.clubName : 'ALL_CLUBS';
+                const selectedClubName = selectedClubUserId === 'ALL_CLUBS' ? 'ALL_CLUBS' : (selectedClub ? selectedClub.clubName : currentUser?.clubName);
+
 
                 const eventResults = results.filter(r => r.eventId === selectedEventId);
                 
@@ -144,7 +156,7 @@ const ClubStartingListPage: React.FC = () => {
                            const currentSwimmerAgeGroup = getAgeGroup(swimmer, eventDetails);
                            if (currentSwimmerAgeGroup === raceDef.ageGroup && timeToMilliseconds(r.seedTime) >= 0) {
                                 raceSwimmersWithSeedTime.push({
-                                    resultId: r.id, swimmerId: r.swimmerId, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
+                                    resultId: r.id, swimmerId: r.id, name: swimmer.name, clubName: swimmer.clubName, gender: swimmer.gender,
                                     ageGroup: currentSwimmerAgeGroup, seedTimeMs: timeToMilliseconds(r.seedTime), seedTimeStr: r.seedTime,
                                     swimmerDob: swimmer.dob, swimmerGradeLevel: swimmer.gradeLevel,
                                 });
@@ -195,15 +207,20 @@ const ClubStartingListPage: React.FC = () => {
         };
 
         generateStartingList();
-    }, [selectedEventId, selectedClubUserId, events, swimmers, results, allClubs]);
+    }, [selectedEventId, selectedClubUserId, events, swimmers, results, allClubs, currentUser]);
 
     const handlePrint = () => {
         if (!selectedEventId || !selectedClubUserId || !events.length) return;
         const event = events.find(e => e.id === selectedEventId);
         if (!event) return;
 
-        const selectedClub = allClubs.find(c => c.id === selectedClubUserId);
-        const clubNameToDisplay = selectedClubUserId === 'ALL_CLUBS' ? 'All Clubs' : selectedClub?.clubName || '';
+        let clubNameToDisplay = 'All Clubs';
+        if (selectedClubUserId === 'ALL_CLUBS') {
+           clubNameToDisplay = 'All Clubs (Admin View)';
+        } else {
+           const selectedClub = allClubs.find(c => c.id === selectedClubUserId);
+           clubNameToDisplay = selectedClub?.clubName || currentUser?.clubName || 'My Club';
+        }
 
         const printData: ClubStartingListPrintData = {
             event: event,
