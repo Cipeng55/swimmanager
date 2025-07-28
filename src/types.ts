@@ -41,6 +41,8 @@ export interface User {
   role: UserRole;
   // If role is 'user', this is the club's name. Otherwise null.
   clubName: string | null; 
+  // If role is 'user' and created by an 'admin', this is the admin's ID.
+  createdByAdminId?: string;
 }
 
 // For creating new users via the form.

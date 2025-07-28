@@ -125,3 +125,9 @@ export const createUser = (userData: NewUserPayload): Promise<User> => {
         body: JSON.stringify(userData),
     });
 };
+
+export const updateUserPassword = (userId: string, password: string): Promise<void> =>
+  apiFetch(`/api/users/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ password }),
+  });
