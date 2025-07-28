@@ -7,6 +7,7 @@ import { SeededSwimmerInfo, Heat, HeatLane } from '../types';
 const LANE_ORDERS: { [key: number]: number[] } = {
   8: [4, 5, 3, 6, 2, 7, 1, 8], // Center-out for 8 lanes
   6: [3, 4, 2, 5, 1, 6],     // Center-out for 6 lanes
+  5: [3, 4, 2, 5, 1],         // Center-out for 5 lanes
   4: [2, 3, 1, 4],         // Center-out for 4 lanes
   // Add other lane configurations as needed
 };

@@ -8,6 +8,7 @@ import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 
 const laneOptions: SelectOption[] = [
   { value: 4, label: '4 Lanes' },
+  { value: 5, label: '5 Lanes' },
   { value: 6, label: '6 Lanes' },
   { value: 8, label: '8 Lanes' },
 ];
