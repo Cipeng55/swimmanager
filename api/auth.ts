@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -22,6 +21,10 @@ async function handleRegularUserLogin(req: VercelRequest, res: VercelResponse) {
 
         if (!user) {
             return res.status(401).json({ message: 'Invalid username or password.' });
+        }
+
+        if (user.status === 'inactive') {
+            return res.status(403).json({ message: 'This account has been deactivated. Please contact an administrator.' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);

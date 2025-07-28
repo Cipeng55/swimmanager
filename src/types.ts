@@ -39,6 +39,7 @@ export interface User {
   username: string;
   password?: string; // Should not be sent to client
   role: UserRole;
+  status?: 'active' | 'inactive'; // User account status
   // If role is 'user', this is the club's name. Otherwise null.
   clubName: string | null; 
   // If role is 'user' and created by an 'admin', this is the admin's ID.

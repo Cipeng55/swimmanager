@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -29,7 +28,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (req.method) {
       case 'GET': {
-        // A generic GET for a single user isn't implemented on the frontend, but we can secure it.
         const canView = authData.role === 'superadmin' || 
                         (authData.role === 'admin' && user.createdByAdminId?.toString() === authData.userId);
         if (!canView) {
@@ -40,33 +38,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'PATCH': {
-        const { password } = req.body;
-        if (!password || typeof password !== 'string' || password.length < 6) {
-          return res.status(400).json({ message: 'Password is required and must be at least 6 characters long.' });
+        const { password, status } = req.body;
+        
+        if (!password && !status) {
+          return res.status(400).json({ message: "Request must include 'password' or 'status' to update." });
         }
 
-        let canReset = false;
-        if (authData.role === 'superadmin' && user.role !== 'superadmin') {
-          canReset = true;
-        } else if (authData.role === 'admin' && user.role === 'user' && user.createdByAdminId?.toString() === authData.userId) {
-          canReset = true;
+        const updateFields: any = {};
+
+        if (password) {
+            if (typeof password !== 'string' || password.length < 6) {
+                return res.status(400).json({ message: 'Password is required and must be at least 6 characters long.' });
+            }
+            let canResetPassword = false;
+            if (authData.role === 'superadmin' && user.role !== 'superadmin') {
+                canResetPassword = true;
+            } else if (authData.role === 'admin' && user.role === 'user' && user.createdByAdminId?.toString() === authData.userId) {
+                canResetPassword = true;
+            }
+            if (!canResetPassword) {
+                return res.status(403).json({ message: "Forbidden: You don't have permission to reset this user's password." });
+            }
+            updateFields.password = await bcrypt.hash(password, 10);
         }
 
-        if (!canReset) {
-          return res.status(403).json({ message: "Forbidden: You don't have permission to reset this user's password." });
+        if (status) {
+            if (status !== 'active' && status !== 'inactive') {
+                return res.status(400).json({ message: "Invalid status. Must be 'active' or 'inactive'." });
+            }
+            if (authData.role !== 'superadmin') {
+                return res.status(403).json({ message: "Forbidden: Only a Super Admin can change a user's status." });
+            }
+            if (user.role === 'superadmin') {
+                return res.status(403).json({ message: "Forbidden: Cannot change status of a Super Admin." });
+            }
+            updateFields.status = status;
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await usersCollection.updateOne({ _id: objectId }, { $set: { password: hashedPassword } });
-
-        if (result.matchedCount === 0) {
-          return res.status(404).json({ message: 'User not found during password update' });
+        if (Object.keys(updateFields).length > 0) {
+            const result = await usersCollection.updateOne({ _id: objectId }, { $set: updateFields });
+            if (result.matchedCount === 0) {
+                return res.status(404).json({ message: 'User not found during update' });
+            }
+            return res.status(200).json({ message: 'User updated successfully' });
         }
-        return res.status(200).json({ message: 'Password updated successfully' });
+        
+        return res.status(400).json({ message: 'No valid update operation performed.' });
       }
       
       case 'DELETE': {
-        // Superadmin can delete any user/admin. Admins can only delete users they created.
          let canDelete = false;
          if (authData.role === 'superadmin' && user.role !== 'superadmin') {
            canDelete = true;

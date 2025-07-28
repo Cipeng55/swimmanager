@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -81,6 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             username,
             password: hashedPassword,
             role,
+            status: 'active', // New accounts are active by default
         };
 
         if (role === 'user') {

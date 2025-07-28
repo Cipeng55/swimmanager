@@ -1,4 +1,3 @@
-
 /**
  * @file This file provides an API service layer that communicates with the backend
  * serverless functions.
@@ -126,8 +125,8 @@ export const createUser = (userData: NewUserPayload): Promise<User> => {
     });
 };
 
-export const updateUserPassword = (userId: string, password: string): Promise<void> =>
+export const updateUser = (userId: string, data: { password?: string, status?: 'active' | 'inactive' }): Promise<void> =>
   apiFetch(`/api/users/${userId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify(data),
   });
