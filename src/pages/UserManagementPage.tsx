@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { User, NewUserPayload, SelectOption } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, updateUser as apiUpdateUser } from '../services/api';
+import { getAllUsers as apiGetAllUsers, createUser as apiCreateUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
@@ -9,6 +9,7 @@ import ResetPasswordModal from '../components/ResetPasswordModal';
 import { KeyIcon } from '../components/icons/KeyIcon';
 import { PowerIcon } from '../components/icons/PowerIcon';
 import Modal from '../components/common/Modal';
+import { DeleteIcon } from '../components/icons/DeleteIcon';
 
 const roleOptions: SelectOption[] = [
     { value: 'user', label: 'User (Club)' },
@@ -40,6 +41,9 @@ const UserManagementPage: React.FC = () => {
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [userToUpdateStatus, setUserToUpdateStatus] = useState<User | null>(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -170,6 +174,30 @@ const UserManagementPage: React.FC = () => {
       setTimeout(() => setSuccessMessage(null), 5000);
     }
   };
+
+  const handleOpenDeleteModal = (user: User) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setUserToDelete(null);
+    setIsDeleteModalOpen(false);
+  };
+  
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    try {
+      await apiDeleteUser(userToDelete.id);
+      setSuccessMessage(`Account '${userToDelete.username}' and all associated data deleted.`);
+      fetchData(); // Refresh list from server
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete user.');
+    } finally {
+      handleCloseDeleteModal();
+      setTimeout(() => setSuccessMessage(null), 5000);
+    }
+  };
   
   const filteredUsers = useMemo(() => {
     if (!searchQuery) return users;
@@ -272,14 +300,22 @@ const UserManagementPage: React.FC = () => {
                                         </button>
                                         {isSuperAdmin && (
                                             <button
-                                            onClick={() => handleOpenConfirmStatusModal(user)}
-                                            className={`${status === 'active' ? 'text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300' : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300'} p-1 rounded-md focus:outline-none focus:ring-2`}
-                                            title={status === 'active' ? 'Deactivate Account' : 'Activate Account'}
-                                            aria-label={status === 'active' ? `Deactivate ${user.username}` : `Activate ${user.username}`}
+                                                onClick={() => handleOpenConfirmStatusModal(user)}
+                                                className={`${status === 'active' ? 'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300' : 'text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300'} p-1 rounded-md focus:outline-none focus:ring-2`}
+                                                title={status === 'active' ? 'Deactivate Account' : 'Activate Account'}
+                                                aria-label={status === 'active' ? `Deactivate ${user.username}` : `Activate ${user.username}`}
                                             >
-                                            <PowerIcon className="h-5 w-5" />
+                                                <PowerIcon className="h-5 w-5" />
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => handleOpenDeleteModal(user)}
+                                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            title="Delete Account"
+                                            aria-label={`Delete account for ${user.username}`}
+                                        >
+                                            <DeleteIcon className="h-5 w-5" />
+                                        </button>
                                         </>
                                     ) : (
                                         <span className="text-xs text-gray-400 italic">N/A</span>
@@ -318,9 +354,35 @@ const UserManagementPage: React.FC = () => {
             <button
               type="button"
               onClick={handleConfirmStatusChange}
-              className={`px-4 py-2 text-sm font-medium text-white rounded-md ${(userToUpdateStatus.status ?? 'active') === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-md ${(userToUpdateStatus.status ?? 'active') === 'active' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}`}
             >
               Confirm
+            </button>
+          </div>
+        </Modal>
+      )}
+      {userToDelete && (
+        <Modal isOpen={isDeleteModalOpen} onClose={handleCloseDeleteModal} title="Confirm Account Deletion">
+          <p className="text-gray-600 dark:text-gray-300 mb-2">
+            Are you sure you want to permanently delete the account for <strong className="dark:text-white">{userToDelete.username}</strong>?
+          </p>
+          <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900 p-2 rounded-md">
+            This action cannot be undone. All associated data (swimmers, results, etc.) will be permanently removed.
+          </p>
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              onClick={handleCloseDeleteModal}
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md"
+            >
+              Yes, Delete Account
             </button>
           </div>
         </Modal>

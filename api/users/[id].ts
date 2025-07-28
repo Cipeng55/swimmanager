@@ -87,22 +87,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       case 'DELETE': {
-         let canDelete = false;
-         if (authData.role === 'superadmin' && user.role !== 'superadmin') {
-           canDelete = true;
-         } else if (authData.role === 'admin' && user.role === 'user' && user.createdByAdminId?.toString() === authData.userId) {
-           canDelete = true;
-         }
+        let canDelete = false;
+        if (authData.role === 'superadmin' && user.role !== 'superadmin') {
+          canDelete = true;
+        } else if (authData.role === 'admin' && user.role === 'user' && user.createdByAdminId?.toString() === authData.userId) {
+          canDelete = true;
+        }
 
-         if (!canDelete) {
-            return res.status(403).json({ message: "Forbidden: You don't have permission to delete this user." });
-         }
+        if (!canDelete) {
+           return res.status(403).json({ message: "Forbidden: You don't have permission to delete this user." });
+        }
+        
+        const swimmersCollection = db.collection('swimmers');
+        const resultsCollection = db.collection('results');
 
-         const result = await usersCollection.deleteOne({ _id: objectId });
-         if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'User not found during deletion' });
-         }
-         return res.status(204).end();
+        // Cascade delete logic
+        if (user.role === 'user') {
+            // Deleting a club account.
+            const swimmersToDelete = await swimmersCollection.find({ clubUserId: id }).project({ _id: 1 }).toArray();
+            if (swimmersToDelete.length > 0) {
+                const swimmerIds = swimmersToDelete.map(s => s._id.toHexString());
+                await resultsCollection.deleteMany({ swimmerId: { $in: swimmerIds } });
+                await swimmersCollection.deleteMany({ _id: { $in: swimmersToDelete.map(s => s._id) } });
+            }
+        } else if (user.role === 'admin' && authData.role === 'superadmin') {
+            // Superadmin deleting an admin account.
+            const usersCreatedByAdmin = await usersCollection.find({ createdByAdminId: id }).project({ _id: 1 }).toArray();
+            if (usersCreatedByAdmin.length > 0) {
+                for (const userToDelete of usersCreatedByAdmin) {
+                    const userIdString = userToDelete._id.toHexString();
+                    const swimmersToDelete = await swimmersCollection.find({ clubUserId: userIdString }).project({ _id: 1 }).toArray();
+                    if (swimmersToDelete.length > 0) {
+                        const swimmerIds = swimmersToDelete.map(s => s._id.toHexString());
+                        await resultsCollection.deleteMany({ swimmerId: { $in: swimmerIds } });
+                        await swimmersCollection.deleteMany({ _id: { $in: swimmersToDelete.map(s => s._id) } });
+                    }
+                }
+                await usersCollection.deleteMany({ _id: { $in: usersCreatedByAdmin.map(u => u._id) } });
+            }
+        }
+
+        // Finally, delete the user/admin itself.
+        const result = await usersCollection.deleteOne({ _id: objectId });
+        if (result.deletedCount === 0) {
+           return res.status(404).json({ message: 'User not found during deletion' });
+        }
+        return res.status(204).end();
       }
 
       default:

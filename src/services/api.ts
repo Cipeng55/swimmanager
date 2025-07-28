@@ -130,3 +130,8 @@ export const updateUser = (userId: string, data: { password?: string, status?: '
     method: 'PATCH',
     body: JSON.stringify(data),
   });
+
+export const deleteUser = (userId: string): Promise<void> =>
+  apiFetch(`/api/users/${userId}`, {
+    method: 'DELETE',
+  });
