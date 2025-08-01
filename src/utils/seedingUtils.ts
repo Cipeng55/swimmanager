@@ -1,5 +1,4 @@
 
-
 import { SeededSwimmerInfo, Heat, HeatLane } from '../types';
 
 // Lane orders: The array values are the LANE NUMBERS (1-based)
@@ -25,7 +24,13 @@ const createHeat = (
   lanesPerHeatConfig: number
 ): Heat => {
   // Sort swimmers for *this specific heat* by seedTimeMs (fastest first) for lane assignment.
-  const sortedHeatSwimmers = [...swimmersForThisHeat].sort((a, b) => a.seedTimeMs - b.seedTimeMs);
+  // Added a stable sort tie-breaker by name.
+  const sortedHeatSwimmers = [...swimmersForThisHeat].sort((a, b) => {
+    if (a.seedTimeMs !== b.seedTimeMs) {
+      return a.seedTimeMs - b.seedTimeMs;
+    }
+    return a.name.localeCompare(b.name);
+  });
 
   const preferredLaneOrder = LANE_ORDERS[lanesPerHeatConfig] || 
                              [...Array(lanesPerHeatConfig).keys()].map(k => Math.floor(lanesPerHeatConfig/2) + 1 - (k%2 === 0 ? -1 : 1) * Math.ceil(k/2) ); // Fallback basic center-outish
@@ -86,13 +91,14 @@ export const generateHeats = (
   }
 
   // 1. Sort all swimmers globally: SLOWEST seed time first (larger ms values first).
-  //    If seed times are identical, randomize order among tied swimmers.
+  //    If seed times are identical, sort by name to ensure a stable, predictable order.
   let sortedGlobalSwimmers = [...allSeededSwimmers].sort((a, b) => {
-    if (a.seedTimeMs === b.seedTimeMs) {
-      return Math.random() - 0.5; // Randomize order for ties
+    if (a.seedTimeMs !== b.seedTimeMs) {
+      // Sort descending by seedTimeMs to get slowest swimmers first
+      return b.seedTimeMs - a.seedTimeMs; 
     }
-    // Sort descending by seedTimeMs to get slowest swimmers first
-    return b.seedTimeMs - a.seedTimeMs; 
+    // Stable sort tie-breaker
+    return a.name.localeCompare(b.name);
   });
 
   const totalSwimmers = sortedGlobalSwimmers.length;
