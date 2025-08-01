@@ -127,6 +127,7 @@ export interface SeededSwimmerInfo {
   ageGroup: string; // Swimmer's specific age group for this race, for display in "Kelas"
   swimmerDob: string; 
   swimmerGradeLevel?: string; // Added for grade system events
+  schoolName?: string;
 }
 
 export interface HeatLane {
@@ -147,6 +148,7 @@ export interface LaneSwimmerDetails extends SeededSwimmerInfo {
 export interface ResultEntry extends SwimResult {
   swimmerName: string;
   swimmerClubName: string;
+  swimmerSchoolName?: string;
   rank?: number; 
   seedTimeStr?: string; 
 }

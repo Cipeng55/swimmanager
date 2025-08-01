@@ -62,9 +62,10 @@ const SwimmerFormPage: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
+        let clubs: User[] = [];
         if (isAdminOrSuper) {
           const users = await getAllUsers();
-          const clubs = users.filter(u => u.role === 'user');
+          clubs = users.filter(u => u.role === 'user');
           setAllClubs(clubs);
           setClubOptions(clubs.map(c => ({ value: c.id, label: c.clubName || c.username })));
         }
@@ -72,9 +73,17 @@ const SwimmerFormPage: React.FC = () => {
         if (isEditing && swimmerId) {
           const swimmer = await getSwimmerById(swimmerId);
           if (swimmer) {
-            const canEdit = currentUser?.role === 'superadmin' || 
-                            currentUser?.role === 'admin' ||
-                            (currentUser?.role === 'user' && swimmer.clubUserId === currentUser.id);
+            let canEdit = false;
+            if (currentUser?.role === 'superadmin') {
+                canEdit = true;
+            } else if (currentUser?.role === 'user' && swimmer.clubUserId === currentUser.id) {
+                canEdit = true;
+            } else if (currentUser?.role === 'admin') {
+                const clubUser = clubs.find(c => c.id === swimmer.clubUserId);
+                if (clubUser && clubUser.createdByAdminId === currentUser.id) {
+                    canEdit = true;
+                }
+            }
 
             if (!canEdit) {
               setError('You are not authorized to edit this swimmer.');

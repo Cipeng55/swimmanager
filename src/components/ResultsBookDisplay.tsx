@@ -4,9 +4,10 @@ import { RaceResults, ResultEntry } from '../types';
 interface ResultsBookDisplayProps {
   raceResults: RaceResults;
   isGradeSystem?: boolean; // To differentiate display for Grade system
+  isSchoolLevelSystem?: boolean;
 }
 
-const ResultsBookDisplay: React.FC<ResultsBookDisplayProps> = ({ raceResults, isGradeSystem = false }) => {
+const ResultsBookDisplay: React.FC<ResultsBookDisplayProps> = ({ raceResults, isGradeSystem = false, isSchoolLevelSystem = false }) => {
   if (!raceResults.results || raceResults.results.length === 0) {
     return <p className="text-gray-500 dark:text-gray-400">No results available for this race.</p>;
   }
@@ -18,6 +19,7 @@ const ResultsBookDisplay: React.FC<ResultsBookDisplayProps> = ({ raceResults, is
           <tr>
             <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rank</th>
             <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+            {isSchoolLevelSystem && <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">School Name</th>}
             <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Club</th>
             <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Seed Time</th>
             <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Final Time</th>
@@ -32,6 +34,7 @@ const ResultsBookDisplay: React.FC<ResultsBookDisplayProps> = ({ raceResults, is
                 {result.rank !== undefined ? result.rank : (result.remarks || '-')}
               </td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">{result.swimmerName}</td>
+              {isSchoolLevelSystem && <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.swimmerSchoolName || '-'}</td>}
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.swimmerClubName}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{result.seedTimeStr || '-'}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm font-semibold text-gray-700 dark:text-gray-200">

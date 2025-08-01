@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -25,25 +26,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ message: 'Swimmer not found' });
     }
 
-    // Permission check for GET
-    const canView = authData.role === 'superadmin' || 
-                    authData.role === 'admin' || 
-                    (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
-
-    if (!canView) {
-        return res.status(403).json({ message: 'Forbidden: You do not have permission to view this swimmer.' });
+    let canModify = false;
+    if (authData.role === 'superadmin') {
+        canModify = true;
+    } else if (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId) {
+        canModify = true;
+    } else if (authData.role === 'admin' && swimmer.clubUserId) {
+        const clubUser = await db.collection('users').findOne({ _id: new ObjectId(swimmer.clubUserId.toString()) });
+        if (clubUser && clubUser.createdByAdminId?.toString() === authData.userId) {
+            canModify = true;
+        }
     }
 
     switch (req.method) {
       case 'GET': {
+        if (!canModify) {
+            // GET might have broader view permissions for any admin/user, but for simplicity we reuse canModify
+            // For this app's logic, if you can't modify, you probably shouldn't be viewing via direct ID link either.
+            const canView = authData.role === 'admin'; // Any admin can view details
+             if (!canView && !canModify) {
+                 return res.status(403).json({ message: 'Forbidden: You do not have permission to view this swimmer.' });
+             }
+        }
         const { _id, ...swimmerData } = swimmer;
         return res.status(200).json({ id: _id.toHexString(), ...swimmerData });
       }
 
       case 'PUT': {
-        const canModify = authData.role === 'superadmin' || 
-                          (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
-        
         if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this swimmer.' });
         }
@@ -61,10 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        const canDelete = authData.role === 'superadmin' || 
-                          (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId);
-
-        if (!canDelete) {
+        if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this swimmer.' });
         }
 

@@ -8,9 +8,10 @@ interface HeatSheetDisplayProps {
   onEditLane: (swimmerInfo: SeededSwimmerInfo, laneNumber: number) => void;
   showEditButton?: boolean; 
   isGradeSystem?: boolean; // To differentiate display for Grade system
+  isSchoolLevelSystem?: boolean;
 }
 
-const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEditLane, showEditButton = false, isGradeSystem = false }) => {
+const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEditLane, showEditButton = false, isGradeSystem = false, isSchoolLevelSystem = false }) => {
   if (!heats || heats.length === 0) {
     return <p className="text-gray-500 dark:text-gray-400">Tidak ada seri (heat) tersedia untuk perlombaan ini.</p>;
   }
@@ -35,6 +36,7 @@ const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEdit
               <tr>
                 <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">Lintasan</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">Nama</th>
+                {isSchoolLevelSystem && <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">Nama Sekolah</th>}
                 <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">{ageOrGradeHeader}</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">Club</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600">Prestasi</th>
@@ -55,6 +57,11 @@ const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEdit
                     <td className="px-3 py-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">
                       {swimmer ? swimmer.name : ''}
                     </td>
+                    {isSchoolLevelSystem && (
+                      <td className="px-3 py-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                        {swimmer ? swimmer.schoolName || '-' : ''}
+                      </td>
+                    )}
                     <td className="px-3 py-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
                       {getAgeOrGradeValue(swimmer)}
                     </td>

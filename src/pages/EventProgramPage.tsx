@@ -175,6 +175,7 @@ const EventProgramPage: React.FC = () => {
             finalTimeStr: r.time || undefined, remarks: r.remarks || undefined,
             swimmerDob: swimmer.dob, 
             swimmerGradeLevel: swimmer.gradeLevel, // Pass gradeLevel
+            schoolName: swimmer.schoolName,
           });
         }
       }
@@ -330,6 +331,7 @@ const EventProgramPage: React.FC = () => {
               onEditLane={canManageEvent ? handleOpenEditLaneModal : () => {}}
               showEditButton={canManageEvent}
               isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}
+              isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL'}
             />
           </section>
         );

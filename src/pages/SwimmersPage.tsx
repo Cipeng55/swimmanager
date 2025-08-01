@@ -173,8 +173,14 @@ const SwimmersPage: React.FC = () => {
   
   const canManageSwimmerRecord = (swimmer: Swimmer): boolean => {
     if (!currentUser) return false;
-    if (isAdminOrSuper) return true;
+    if (currentUser.role === 'superadmin') return true;
     if (currentUser.role === 'user' && swimmer.clubUserId === currentUser.id) return true;
+    if (currentUser.role === 'admin') {
+      // Find the user account for the swimmer's club
+      const swimmerClubUser = allClubs.find(club => club.id === swimmer.clubUserId);
+      // Check if that club user was created by the current admin
+      return !!swimmerClubUser && swimmerClubUser.createdByAdminId === currentUser.id;
+    }
     return false;
   };
 

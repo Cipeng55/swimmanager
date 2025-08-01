@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { connectToDatabase } from '../_lib/mongodb.js';
 import { verifyToken } from '../_lib/auth.js';
@@ -29,19 +30,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ message: 'Associated swimmer not found for this result.' });
     }
 
+    const event = await db.collection('events').findOne({ _id: new ObjectId(result.eventId) });
+    if (!event) {
+        return res.status(404).json({ message: 'Associated event not found for this result.' });
+    }
+
     // Permission check
-    const isSuperAdmin = authData.role === 'superadmin';
-    const isOwnerUser = authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId;
-    // For now, allow any admin/user to GET if they pass initial auth, can be tightened later if needed.
-    
+    let canModify = false;
+    if (authData.role === 'superadmin') {
+        canModify = true;
+    } else if (authData.role === 'admin' && event.createdByAdminId?.toString() === authData.userId) {
+        canModify = true; // Admin who created the event can modify its results
+    } else if (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId) {
+        canModify = true; // User who owns the swimmer can modify their results (but usually an admin does this from program page)
+    }
+
     switch (req.method) {
       case 'GET': {
+        // Any authenticated user can GET a specific result by ID if they know it
         const { _id, ...resultData } = result;
         return res.status(200).json({ id: _id.toHexString(), ...resultData });
       }
 
       case 'PUT': {
-        if (!isSuperAdmin && !isOwnerUser) {
+        if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to modify this result.' });
         }
         
@@ -54,7 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case 'DELETE': {
-        if (!isSuperAdmin && !isOwnerUser) {
+        if (!canModify) {
             return res.status(403).json({ message: 'Forbidden: You do not have permission to delete this result.' });
         }
 

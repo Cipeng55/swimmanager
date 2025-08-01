@@ -30,7 +30,7 @@ const PrintableResultsBook: React.FC = () => {
       if (!swimmer || !swimmer.dob) return;
       const ageGroup = getAgeGroup(swimmer, event);
       if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
-      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, seedTimeStr: result.seedTime || undefined };
+      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, swimmerSchoolName: swimmer.schoolName, seedTimeStr: result.seedTime || undefined };
       const raceKey = `${result.style}-${result.distance}-${swimmer.gender}-${ageGroup}`;
       if (!groupedByRace.has(raceKey)) groupedByRace.set(raceKey, []);
       groupedByRace.get(raceKey)!.push(entry);
@@ -130,6 +130,7 @@ const PrintableResultsBook: React.FC = () => {
   if (!printData) return <div className="text-center py-10">No data available to print.</div>;
 
   const { event, processedRaceResults } = printData;
+  const isSchoolLevelEvent = event.categorySystem === 'SCHOOL_LEVEL';
 
   return (
     <div className="printable-container p-4 sm:p-8 bg-white text-black">
@@ -173,7 +174,7 @@ const PrintableResultsBook: React.FC = () => {
             <table className="min-w-full text-xs">
               <thead>
                 <tr>
-                  <th>Rank</th><th>Name</th><th>Club</th><th>Seed Time</th><th>Final Time</th><th>Remarks</th><th>Date Recorded</th>
+                  <th>Rank</th><th>Name</th>{isSchoolLevelEvent && <th>School Name</th>}<th>Club</th><th>Seed Time</th><th>Final Time</th><th>Remarks</th><th>Date Recorded</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +182,7 @@ const PrintableResultsBook: React.FC = () => {
                   <tr key={result.id}>
                     <td>{result.rank !== undefined ? result.rank : (result.remarks || '-')}</td>
                     <td>{result.swimmerName}</td>
+                    {isSchoolLevelEvent && <td>{result.swimmerSchoolName || '-'}</td>}
                     <td>{result.swimmerClubName}</td>
                     <td>{result.seedTimeStr || '-'}</td>
                     <td style={{ fontWeight: 'bold' }}>{result.time && result.time !== "99:99.99" ? result.time : (result.remarks ? '' : '-')}</td>

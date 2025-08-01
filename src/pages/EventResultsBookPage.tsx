@@ -33,7 +33,7 @@ const EventResultsBookPage: React.FC = () => {
       const ageGroup = getAgeGroup(swimmer, event);
       if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
       
-      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, seedTimeStr: result.seedTime || undefined };
+      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, swimmerSchoolName: swimmer.schoolName, seedTimeStr: result.seedTime || undefined };
       const raceKey = `${result.style}-${result.distance}-${swimmer.gender}-${ageGroup}`;
       if (!groupedByRace.has(raceKey)) groupedByRace.set(raceKey, []);
       groupedByRace.get(raceKey)!.push(entry);
@@ -167,7 +167,11 @@ const EventResultsBookPage: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
             {raceResult.definition.distance}m {raceResult.definition.style.toUpperCase()} - {raceResult.definition.ageGroup.toUpperCase()} - {genderDisplay(raceResult.definition.gender)}
           </h2>
-          <ResultsBookDisplay raceResults={raceResult} isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}/>
+          <ResultsBookDisplay
+            raceResults={raceResult}
+            isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}
+            isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL'}
+          />
         </section>
       ))}
     </div>

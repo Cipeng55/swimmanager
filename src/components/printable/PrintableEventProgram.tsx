@@ -56,6 +56,7 @@ const PrintableEventProgram: React.FC = () => {
             finalTimeStr: r.time || undefined, remarks: r.remarks || undefined,
             swimmerDob: swimmer.dob,
             swimmerGradeLevel: swimmer.gradeLevel,
+            schoolName: swimmer.schoolName,
           });
         }
       }
@@ -160,6 +161,7 @@ const PrintableEventProgram: React.FC = () => {
 
   const { event, racesWithHeats } = printData;
   const isGradeSystemEvent = event.categorySystem === 'GRADE' || event.categorySystem === 'SCHOOL_LEVEL';
+  const isSchoolLevelSystemEvent = event.categorySystem === 'SCHOOL_LEVEL';
 
   return (
     <div className="printable-container p-4 sm:p-8 bg-white text-black">
@@ -207,7 +209,7 @@ const PrintableEventProgram: React.FC = () => {
                 <table className="min-w-full text-xs">
                   <thead>
                     <tr>
-                      <th>Lintasan</th><th>Nama</th><th>{categoryHeaderLabel}</th><th>Club</th><th>Prestasi</th><th>Waktu Final</th><th>Keterangan</th>
+                      <th>Lintasan</th><th>Nama</th>{isSchoolLevelSystemEvent && <th>Sekolah</th>}<th>{categoryHeaderLabel}</th><th>Club</th><th>Prestasi</th><th>Waktu Final</th><th>Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -220,6 +222,7 @@ const PrintableEventProgram: React.FC = () => {
                         <tr key={laneNumber}>
                           <td>{laneNumber}</td>
                           <td>{swimmer ? swimmer.name : ''}</td>
+                          {isSchoolLevelSystemEvent && <td>{swimmer ? swimmer.schoolName || '-' : ''}</td>}
                           <td>{displayCategory}</td>
                           <td>{swimmer ? swimmer.clubName : ''}</td>
                           <td>{swimmer ? swimmer.seedTimeStr : ''}</td>
