@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { ResultsBookPrintData, SwimEvent, RaceResults, ResultEntry, Swimmer, SwimResult } from '../../types';
@@ -23,8 +24,8 @@ const PrintableResultsBook: React.FC = () => {
 
   const processDataForBook = useCallback((event: SwimEvent, results: SwimResult[], swimmers: Swimmer[]): RaceResults[] => {
     if (!results.length || !swimmers.length || !event) return [];
+    
     const groupedByRace = new Map<string, ResultEntry[]>();
-    const nonRankingRemarkValues = ['DQ', 'DNS', 'DNF'];
     results.forEach(result => {
       const swimmer = swimmers.find(s => s.id === result.swimmerId);
       if (!swimmer || !swimmer.dob) return;
@@ -39,23 +40,37 @@ const PrintableResultsBook: React.FC = () => {
     const finalRaces: RaceResults[] = [];
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
-      const rankableEntries: ResultEntry[] = [];
-      const nonRankableEntries: ResultEntry[] = [];
+      
+      const timeSortableEntries: ResultEntry[] = [];
+      const nonTimeSortableEntries: ResultEntry[] = [];
+      
       raceEntries.forEach(entry => {
-        const isNonRankableRemark = entry.remarks && nonRankingRemarkValues.includes(entry.remarks.toUpperCase());
         const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-        if (isNonRankableRemark || !hasValidTime) {
-          nonRankableEntries.push(entry);
+        const isDQ_DNS_DNF = entry.remarks && ['DQ', 'DNS', 'DNF'].includes(entry.remarks.toUpperCase());
+        
+        if (hasValidTime && !isDQ_DNS_DNF) {
+          timeSortableEntries.push(entry);
         } else {
-          rankableEntries.push(entry);
+          nonTimeSortableEntries.push(entry);
         }
       });
-      rankableEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-      rankableEntries.forEach((entry, index) => { entry.rank = index + 1; });
-      nonRankableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      
+      timeSortableEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
+      
+      let rankCounter = 1;
+      timeSortableEntries.forEach(entry => {
+        if (entry.remarks?.toUpperCase() !== 'SP') {
+          entry.rank = rankCounter++;
+        } else {
+          entry.rank = undefined; 
+        }
+      });
+      
+      nonTimeSortableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      
       finalRaces.push({
         definition: { style, distance: parseInt(distanceStr), gender: gender as Swimmer['gender'], ageGroup },
-        results: [...rankableEntries, ...nonRankableEntries]
+        results: [...timeSortableEntries, ...nonTimeSortableEntries]
       });
     });
 

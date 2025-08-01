@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Modal from './common/Modal';
 import FormField from './common/FormField';
@@ -13,6 +14,7 @@ interface EditLaneResultModalProps {
 
 const remarkOptions: SelectOption[] = [
   { value: '', label: 'No Remark / OK' },
+  { value: 'SP', label: 'SP (Sparing Partner)' },
   { value: 'DQ', label: 'DQ (Disqualified)' },
   { value: 'DNS', label: 'DNS (Did Not Start)' },
   { value: 'DNF', label: 'DNF (Did Not Finish)' },
