@@ -48,6 +48,7 @@ const SwimmerFormPage: React.FC = () => {
     clubName: currentUser?.clubName || '',
     clubUserId: currentUser?.role === 'user' ? currentUser.id : '',
     gradeLevel: '',
+    schoolName: '',
   });
   
   const [allClubs, setAllClubs] = useState<User[]>([]);
@@ -146,6 +147,7 @@ const SwimmerFormPage: React.FC = () => {
         dob: new Date(swimmerData.dob!).toISOString().split('T')[0], 
         gender: swimmerData.gender!,
         gradeLevel: swimmerData.gradeLevel?.trim() || undefined,
+        schoolName: swimmerData.schoolName?.trim() || undefined,
       };
 
       if (isAdminOrSuper) {
@@ -195,6 +197,9 @@ const SwimmerFormPage: React.FC = () => {
           )}
           <FormField label="Grade Level (School)" id="gradeLevel" name="gradeLevel" type="select" options={gradeLevelOptions} value={swimmerData.gradeLevel || ''} onChange={handleChange} error={formErrors.gradeLevel as string} disabled={loading || isUnauthorized} />
         </div>
+
+        <FormField label="School Name (Optional)" id="schoolName" name="schoolName" type="text" value={swimmerData.schoolName || ''} onChange={handleChange} disabled={loading || isUnauthorized} />
+
 
         <div className="flex items-center justify-end space-x-3 pt-4 border-t dark:border-gray-700">
           <Link to="/swimmers" className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-md">Cancel</Link>

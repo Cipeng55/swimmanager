@@ -1,4 +1,3 @@
-
 // utils/csvParser.ts
 export interface ParsedSwimmerRow {
   Name?: string;
@@ -6,11 +5,12 @@ export interface ParsedSwimmerRow {
   Gender?: string;
   Club?: string; // This will be ignored, but kept for parsing flexibility
   GradeLevel?: string; // Added for school grade
+  SchoolName?: string;
 }
 
 /**
  * Parses CSV text into an array of swimmer data objects.
- * Expects headers roughly matching: Name,DOB,Gender,GradeLevel (Club is ignored)
+ * Expects headers roughly matching: Name,DOB,Gender,GradeLevel,SchoolName (Club is ignored)
  * @param csvText The raw CSV string.
  * @returns An array of ParsedSwimmerRow objects.
  * @throws Error if essential headers (Name, DOB, Gender) are missing.
@@ -31,6 +31,7 @@ export const parseSwimmerCsv = (csvText: string): ParsedSwimmerRow[] => {
     gender: 'Gender',
     club: 'Club', // Kept for parsing but will be ignored
     gradelevel: 'GradeLevel', 
+    schoolname: 'SchoolName',
   };
   const requiredDisplayHeaders: (keyof ParsedSwimmerRow)[] = ['Name', 'DOB', 'Gender'];
 
@@ -56,7 +57,7 @@ export const parseSwimmerCsv = (csvText: string): ParsedSwimmerRow[] => {
   );
 
   if (missingRequiredDisplayHeaders.length > 0) {
-    throw new Error(`CSV Headers are missing or incorrect. Missing required headers similar to: ${missingRequiredDisplayHeaders.join(', ')}. Please ensure your CSV has columns for Name, DOB, and Gender. GradeLevel is optional and Club is ignored.`);
+    throw new Error(`CSV Headers are missing or incorrect. Missing required headers similar to: ${missingRequiredDisplayHeaders.join(', ')}. Please ensure your CSV has columns for Name, DOB, and Gender. GradeLevel and SchoolName are optional and Club is ignored.`);
   }
 
   if (lines.length < 2) return []; // Only header row, no data

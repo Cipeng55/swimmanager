@@ -16,7 +16,7 @@ const laneOptions: SelectOption[] = [
 const categorySystemOptions: SelectOption[] = [
   { value: 'KU', label: 'KU System (Standard Age Groups)' },
   { value: 'LETTER', label: 'Letter System (A-I, by DOB range)' },
-  { value: 'GRADE', label: 'Grade System (Kelas, by age approx.)' },
+  { value: 'GRADE', label: 'Grade System (Grouped by School Grade)' },
 ];
 
 const letterCategories: LetterCategory[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];

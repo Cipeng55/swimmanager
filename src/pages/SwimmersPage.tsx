@@ -114,6 +114,7 @@ const SwimmersPage: React.FC = () => {
       const dob = row.DOB?.trim();
       const genderInput = row.Gender?.trim();
       const gradeLevel = row.GradeLevel?.trim() || undefined;
+      const schoolName = row.SchoolName?.trim() || undefined;
 
       if (!name) rowErrors.push('Name is missing.');
       if (!dob) rowErrors.push('DOB is missing.');
@@ -153,6 +154,7 @@ const SwimmersPage: React.FC = () => {
             dob: dob!, 
             gender: validGender!, 
             gradeLevel: gradeLevel, 
+            schoolName: schoolName,
             ...clubPayload
           };
           await addSwimmer(swimmerPayload);
@@ -229,6 +231,7 @@ const SwimmersPage: React.FC = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gender</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Club</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Grade Level</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">School Name</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -240,6 +243,7 @@ const SwimmersPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gender}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.clubName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.gradeLevel || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{swimmer.schoolName || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
                       {canManageSwimmerRecord(swimmer) ? (
                         <>

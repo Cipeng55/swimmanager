@@ -110,17 +110,18 @@ const ImportSwimmersModal: React.FC<ImportSwimmersModalProps> = ({
     reader.readAsText(selectedFile);
   };
 
-  const csvInstructions = `Name,DOB,Gender,${isAdminOrSuper ? 'Club,' : ''}GradeLevel
+  const csvInstructions = `Name,DOB,Gender,${isAdminOrSuper ? 'Club,' : ''}GradeLevel,SchoolName
 - Name: Full name of the swimmer (Text)
 - DOB: Date of Birth in YYYY-MM-DD format (e.g., 2005-12-31)
 - Gender: Must be one of 'Male', 'Female', or 'Other'
 ${isAdminOrSuper ? "- Club: Name of the swimmer's club (REQUIRED for your role)" : ''}
 - GradeLevel (Optional): Swimmer's school grade (e.g., "SD Kelas 1")
+- SchoolName (Optional): Full name of swimmer's school (e.g., "SDN Menteng 01")
 
 Example:
-Name,DOB,Gender,Club,GradeLevel
-John Doe,2008-03-15,Male,Dolphins SC,SD Kelas 6
-Jane Smith,2009-07-22,Female,Sharks Club,SD Kelas 5
+Name,DOB,Gender,Club,GradeLevel,SchoolName
+John Doe,2008-03-15,Male,Dolphins SC,SD Kelas 6,SDN Menteng 01
+Jane Smith,2009-07-22,Female,Sharks Club,SD Kelas 5,SD Islam Al-Azhar
 
 Important:
 - Required headers (case-insensitive): Name, DOB, Gender${isAdminOrSuper ? ', Club' : ''}.

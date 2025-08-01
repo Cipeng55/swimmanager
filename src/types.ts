@@ -81,6 +81,7 @@ export interface Swimmer {
   clubName: string; // The name of the club, denormalized for display
   clubUserId: string; // The ID of the User (role 'user') that owns this swimmer
   gradeLevel?: string; // e.g., "TK A", "SD Kelas 1", "SMA Kelas XII"
+  schoolName?: string; // e.g., "SDN Menteng 01"
 }
 export type NewSwimmer = Omit<Swimmer, 'id' | 'clubUserId' | 'clubName'>;
 
