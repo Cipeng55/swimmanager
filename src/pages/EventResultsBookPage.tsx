@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { SwimEvent, SwimResult, Swimmer, RaceResults, ResultEntry, ResultsBookPrintData } from '../types';
-import { getEventById, getResults, getSwimmers } from '../services/api';
+import { SwimEvent, SwimResult, Swimmer, RaceResults, ResultEntry, ResultsBookPrintData, RaceDefinition } from '../types';
+import { getEventById, getResults, getSwimmers, getEventProgramOrder } from '../services/api';
 import { timeToMilliseconds } from '../utils/timeUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../utils/ageUtils'; 
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -10,6 +10,26 @@ import ResultsBookDisplay from '../components/ResultsBookDisplay';
 import { PrinterIcon } from '../components/icons/PrinterIcon'; 
 
 const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => { return gender === 'Male' ? 'PUTRA' : 'PUTRI'; };
+
+const generateRaceKey = (race: RaceDefinition): string => {
+  return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
+};
+
+const defaultRaceSort = (a: RaceDefinition, b: RaceDefinition): number => {
+  const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
+  const ageGroupComparison = getSortableAgeGroup(a.ageGroup) - getSortableAgeGroup(b.ageGroup);
+  if (ageGroupComparison !== 0) return ageGroupComparison;
+  const styleAIndex = styleOrder.indexOf(a.style);
+  const styleBIndex = styleOrder.indexOf(b.style);
+   if (styleAIndex !== styleBIndex) {
+    return (styleAIndex === -1 ? 99 : styleAIndex) - (styleBIndex === -1 ? 99 : styleBIndex);
+  }
+  if (a.distance !== b.distance) return a.distance - b.distance;
+  if (a.gender === 'Male' && b.gender === 'Female') return -1;
+  if (a.gender === 'Female' && b.gender === 'Male') return 1;
+  return 0;
+};
+
 
 const EventResultsBookPage: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>(); 
@@ -19,7 +39,12 @@ const EventResultsBookPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [processedRaceResults, setProcessedRaceResults] = useState<RaceResults[]>([]);
 
-  const processDataForBook = useCallback((event: SwimEvent, results: SwimResult[], swimmers: Swimmer[]): RaceResults[] => {
+  const processDataForBook = useCallback((
+    event: SwimEvent, 
+    results: SwimResult[], 
+    swimmers: Swimmer[],
+    raceKeyToAcaraNumberMap: Map<string, number>
+  ): RaceResults[] => {
     if (!results.length || !swimmers.length || !event) return [];
     
     const groupedByRace = new Map<string, ResultEntry[]>();
@@ -69,12 +94,24 @@ const EventResultsBookPage: React.FC = () => {
       nonTimeSortableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
       
       finalRaces.push({
-        definition: { style, distance: parseInt(distanceStr), gender: gender as Swimmer['gender'], ageGroup },
+        definition: { 
+          style, 
+          distance: parseInt(distanceStr), 
+          gender: gender as Swimmer['gender'], 
+          ageGroup,
+          acaraNumber: raceKeyToAcaraNumberMap.get(raceKey)
+        },
         results: [...timeSortableEntries, ...nonTimeSortableEntries]
       });
     });
 
     finalRaces.sort((a, b) => {
+        if (a.definition.acaraNumber != null && b.definition.acaraNumber != null) {
+            return a.definition.acaraNumber - b.definition.acaraNumber;
+        }
+        if (a.definition.acaraNumber != null) return -1;
+        if (b.definition.acaraNumber != null) return 1;
+
         const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
         const ageGroupComparison = getSortableAgeGroup(a.definition.ageGroup) - getSortableAgeGroup(b.definition.ageGroup);
         if (ageGroupComparison !== 0) return ageGroupComparison;
@@ -104,10 +141,11 @@ const EventResultsBookPage: React.FC = () => {
           throw new Error("Invalid Event ID format.");
         }
         
-        const [eventData, resultsData, swimmersData] = await Promise.all([
+        const [eventData, resultsData, swimmersData, customOrderedKeys] = await Promise.all([
           getEventById(eventId),
           getResults(),
           getSwimmers(),
+          getEventProgramOrder(eventId),
         ]);
 
         if (!eventData) {
@@ -115,7 +153,39 @@ const EventResultsBookPage: React.FC = () => {
         }
         
         setEvent(eventData);
-        const processedData = processDataForBook(eventData, resultsData, swimmersData);
+
+        const eventResults = resultsData.filter(r => r.eventId === eventId);
+        const raceMap = new Map<string, RaceDefinition>();
+        eventResults.forEach(result => {
+          const swimmer = swimmersData.find(s => s.id === result.swimmerId);
+          if (!swimmer || !swimmer.gender || !swimmer.dob || !result.seedTime ) return;
+          const ageGroup = getAgeGroup(swimmer, eventData);
+          if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
+          const raceKey = generateRaceKey({ style: result.style, distance: result.distance, gender: swimmer.gender, ageGroup: ageGroup });
+          if (!raceMap.has(raceKey)) {
+            raceMap.set(raceKey, { style: result.style, distance: result.distance, gender: swimmer.gender, ageGroup: ageGroup });
+          }
+        });
+        const initialUniqueRaces = Array.from(raceMap.values());
+
+        let orderedRaces: RaceDefinition[] = [];
+        if (customOrderedKeys) {
+            const initialRacesMap: Map<string, RaceDefinition> = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
+            customOrderedKeys.forEach(key => {
+              if (initialRacesMap.has(key)) {
+                orderedRaces.push(initialRacesMap.get(key)!);
+                initialRacesMap.delete(key); 
+              }
+            });
+            const remainingRaces = Array.from(initialRacesMap.values()).sort(defaultRaceSort);
+            orderedRaces = [...orderedRaces, ...remainingRaces];
+        } else {
+            orderedRaces = [...initialUniqueRaces].sort(defaultRaceSort);
+        }
+        const numberedUniqueRaces = orderedRaces.map((race, index) => ({ ...race, acaraNumber: index + 1 }));
+        const raceKeyToAcaraNumberMap = new Map(numberedUniqueRaces.map(r => [generateRaceKey(r), r.acaraNumber!]));
+        
+        const processedData = processDataForBook(eventData, resultsData, swimmersData, raceKeyToAcaraNumberMap);
         setProcessedRaceResults(processedData);
 
       } catch (err: any) {
@@ -172,6 +242,7 @@ const EventResultsBookPage: React.FC = () => {
       {processedRaceResults.map((raceResult, index) => (
         <section key={`${index}-${raceResult.definition.style}`} className="mb-10">
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
+            {raceResult.definition.acaraNumber && `ACARA ${raceResult.definition.acaraNumber} - `}
             {raceResult.definition.distance}m {raceResult.definition.style.toUpperCase()} - {raceResult.definition.ageGroup.toUpperCase()} - {genderDisplay(raceResult.definition.gender)}
           </h2>
           <ResultsBookDisplay

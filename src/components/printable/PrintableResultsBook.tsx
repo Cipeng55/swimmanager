@@ -1,14 +1,33 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { ResultsBookPrintData, SwimEvent, RaceResults, ResultEntry, Swimmer, SwimResult } from '../../types';
+import { ResultsBookPrintData, SwimEvent, RaceResults, ResultEntry, Swimmer, SwimResult, RaceDefinition } from '../../types';
 import LoadingSpinner from '../common/LoadingSpinner';
-import { getEventById, getResults, getSwimmers } from '../../services/api';
+import { getEventById, getResults, getSwimmers, getEventProgramOrder } from '../../services/api';
 import { timeToMilliseconds } from '../../utils/timeUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../../utils/ageUtils';
 
 const genderDisplayPrint = (gender: Swimmer['gender'] | 'Mixed'): string => {
   return gender === 'Male' ? 'PUTRA' : 'PUTRI';
+};
+
+const generateRaceKey = (race: RaceDefinition): string => {
+  return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
+};
+
+const defaultRaceSort = (a: RaceDefinition, b: RaceDefinition): number => {
+  const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
+  const ageGroupComparison = getSortableAgeGroup(a.ageGroup) - getSortableAgeGroup(b.ageGroup);
+  if (ageGroupComparison !== 0) return ageGroupComparison;
+  const styleAIndex = styleOrder.indexOf(a.style);
+  const styleBIndex = styleOrder.indexOf(b.style);
+   if (styleAIndex !== styleBIndex) {
+    return (styleAIndex === -1 ? 99 : styleAIndex) - (styleBIndex === -1 ? 99 : styleBIndex);
+  }
+  if (a.distance !== b.distance) return a.distance - b.distance;
+  if (a.gender === 'Male' && b.gender === 'Female') return -1;
+  if (a.gender === 'Female' && b.gender === 'Male') return 1;
+  return 0;
 };
 
 const PrintableResultsBook: React.FC = () => {
@@ -22,7 +41,7 @@ const PrintableResultsBook: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(!initialPrintData);
   const [error, setError] = useState<string | null>(null);
 
-  const processDataForBook = useCallback((event: SwimEvent, results: SwimResult[], swimmers: Swimmer[]): RaceResults[] => {
+  const processDataForBook = useCallback((event: SwimEvent, results: SwimResult[], swimmers: Swimmer[], raceKeyToAcaraNumberMap: Map<string, number>): RaceResults[] => {
     if (!results.length || !swimmers.length || !event) return [];
     
     const groupedByRace = new Map<string, ResultEntry[]>();
@@ -69,12 +88,24 @@ const PrintableResultsBook: React.FC = () => {
       nonTimeSortableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
       
       finalRaces.push({
-        definition: { style, distance: parseInt(distanceStr), gender: gender as Swimmer['gender'], ageGroup },
+        definition: { 
+          style, 
+          distance: parseInt(distanceStr), 
+          gender: gender as Swimmer['gender'], 
+          ageGroup,
+          acaraNumber: raceKeyToAcaraNumberMap.get(raceKey)
+        },
         results: [...timeSortableEntries, ...nonTimeSortableEntries]
       });
     });
 
     finalRaces.sort((a, b) => {
+      if (a.definition.acaraNumber != null && b.definition.acaraNumber != null) {
+        return a.definition.acaraNumber - b.definition.acaraNumber;
+      }
+      if (a.definition.acaraNumber != null) return -1;
+      if (b.definition.acaraNumber != null) return 1;
+
       const ageGroupComparison = getSortableAgeGroup(a.definition.ageGroup) - getSortableAgeGroup(b.definition.ageGroup);
       if (ageGroupComparison !== 0) return ageGroupComparison;
       const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
@@ -101,16 +132,48 @@ const PrintableResultsBook: React.FC = () => {
     try {
       if (isNaN(parseInt(eventId))) { throw new Error("Invalid Event ID format."); }
       
-      const [eventData, resultsData, swimmersData] = await Promise.all([
+      const [eventData, resultsData, swimmersData, customOrderedKeys] = await Promise.all([
         getEventById(eventId),
         getResults(),
-        getSwimmers()
+        getSwimmers(),
+        getEventProgramOrder(eventId)
       ]);
 
       if (!eventData) { throw new Error(`Event with ID ${eventId} not found.`); }
       
       const filteredResults = resultsData.filter(r => r.eventId === eventId);
-      const processedRaceResults = processDataForBook(eventData, filteredResults, swimmersData);
+
+      const raceMap = new Map<string, RaceDefinition>();
+      filteredResults.forEach(result => {
+        const swimmer = swimmersData.find(s => s.id === result.swimmerId);
+        if (!swimmer || !swimmer.gender || !swimmer.dob || !result.seedTime ) return;
+        const ageGroup = getAgeGroup(swimmer, eventData);
+        if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
+        const raceKey = generateRaceKey({ style: result.style, distance: result.distance, gender: swimmer.gender, ageGroup: ageGroup });
+        if (!raceMap.has(raceKey)) {
+          raceMap.set(raceKey, { style: result.style, distance: result.distance, gender: swimmer.gender, ageGroup: ageGroup });
+        }
+      });
+      const initialUniqueRaces = Array.from(raceMap.values());
+
+      let orderedRaces: RaceDefinition[] = [];
+      if (customOrderedKeys) {
+          const initialRacesMap: Map<string, RaceDefinition> = new Map(initialUniqueRaces.map(r => [generateRaceKey(r), r]));
+          customOrderedKeys.forEach(key => {
+            if (initialRacesMap.has(key)) {
+              orderedRaces.push(initialRacesMap.get(key)!);
+              initialRacesMap.delete(key); 
+            }
+          });
+          const remainingRaces = Array.from(initialRacesMap.values()).sort(defaultRaceSort);
+          orderedRaces = [...orderedRaces, ...remainingRaces];
+      } else {
+          orderedRaces = [...initialUniqueRaces].sort(defaultRaceSort);
+      }
+      const numberedUniqueRaces = orderedRaces.map((race, index) => ({ ...race, acaraNumber: index + 1 }));
+      const raceKeyToAcaraNumberMap = new Map(numberedUniqueRaces.map(r => [generateRaceKey(r), r.acaraNumber!]));
+      
+      const processedRaceResults = processDataForBook(eventData, filteredResults, swimmersData, raceKeyToAcaraNumberMap);
 
       setPrintData({
         event: eventData,
@@ -183,6 +246,7 @@ const PrintableResultsBook: React.FC = () => {
       {processedRaceResults.map((raceResult, index) => (
         <div key={`${index}-${raceResult.definition.style}`} className="race-result-section mb-6" style={{ pageBreakAfter: 'auto' }}>
           <h2 className="race-result-header text-lg font-semibold mt-4 mb-2">
+            {raceResult.definition.acaraNumber && `ACARA ${raceResult.definition.acaraNumber} - `}
             {raceResult.definition.distance}m {raceResult.definition.style.toUpperCase()} - {raceResult.definition.ageGroup.toUpperCase()} - {genderDisplayPrint(raceResult.definition.gender)}
           </h2>
           {raceResult.results && raceResult.results.length > 0 ? (
