@@ -167,7 +167,7 @@ const EventResultsBookPage: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">
             {raceResult.definition.distance}m {raceResult.definition.style.toUpperCase()} - {raceResult.definition.ageGroup.toUpperCase()} - {genderDisplay(raceResult.definition.gender)}
           </h2>
-          <ResultsBookDisplay raceResults={raceResult} isGradeSystem={event?.categorySystem === 'GRADE'}/>
+          <ResultsBookDisplay raceResults={raceResult} isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}/>
         </section>
       ))}
     </div>

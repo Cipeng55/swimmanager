@@ -20,7 +20,7 @@ const HeatSheetDisplay: React.FC<HeatSheetDisplayProps> = ({ race, heats, onEdit
   const ageOrGradeHeader = isGradeSystem ? 'Grade Level' : 'Kelas';
   const getAgeOrGradeValue = (swimmer?: SeededSwimmerInfo) => {
     if (!swimmer) return '';
-    return isGradeSystem ? (swimmer.swimmerGradeLevel || swimmer.ageGroup) : swimmer.ageGroup;
+    return isGradeSystem ? swimmer.ageGroup : swimmer.ageGroup;
   };
 
   return (

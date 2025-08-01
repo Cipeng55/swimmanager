@@ -23,7 +23,7 @@ export interface SwimEvent {
   location: string;
   description?: string;
   lanesPerEvent?: number; // Number of lanes for this event (e.g., 4, 6, 8)
-  categorySystem?: 'KU' | 'LETTER' | 'GRADE';
+  categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event

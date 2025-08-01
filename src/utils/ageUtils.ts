@@ -1,4 +1,3 @@
-
 import { SwimEvent, LetterCategory, Swimmer } from '../types'; 
 
 /**
@@ -37,6 +36,10 @@ export const getAgeGroup = (
   const categorySystem = event.categorySystem || 'KU';
   
   if (categorySystem === 'GRADE') {
+    return swimmer.gradeLevel || "Grade Not Specified";
+  }
+  
+  if (categorySystem === 'SCHOOL_LEVEL') {
     const grade = swimmer.gradeLevel;
     if (!grade || grade.trim() === '') return "Grade Not Specified";
 
@@ -94,7 +97,7 @@ export const getAgeGroup = (
 /**
  * Returns a sortable numeric value for an age group label, considering different category systems.
  * Lower numbers indicate younger/earlier groups.
- * @param ageGroupLabel The age group string label (e.g., "KU V", "A", "A. 1-2 SD/MI").
+ * @param ageGroupLabel The age group string label (e.g., "KU V", "A", "A. 1-2 SD/MI", "SD Kelas 1").
  * @returns A number for sorting.
  */
 export const getSortableAgeGroup = (ageGroupLabel: string): number => {
@@ -117,12 +120,31 @@ export const getSortableAgeGroup = (ageGroupLabel: string): number => {
   if (ageGroupLabel === "H") return 17;
   if (ageGroupLabel === "I") return 18;
   
-  // New GRADE System (Grouped)
-  if (ageGroupLabel === "A. 1-2 SD/MI") return 23;
-  if (ageGroupLabel === "B. 3-4 SD/MI") return 25;
-  if (ageGroupLabel === "C. 5-6 SD/MI") return 27;
-  if (ageGroupLabel === "D. 7-9 SMP/MTS") return 29;
-  if (ageGroupLabel === "E. 10-12 SMA/MA") return 32;
+  // New SCHOOL_LEVEL System (Grouped Grade)
+  if (ageGroupLabel === "A. 1-2 SD/MI") return 20;
+  if (ageGroupLabel === "B. 3-4 SD/MI") return 21;
+  if (ageGroupLabel === "C. 5-6 SD/MI") return 22;
+  if (ageGroupLabel === "D. 7-9 SMP/MTS") return 23;
+  if (ageGroupLabel === "E. 10-12 SMA/MA") return 24;
+  
+  // GRADE System (Individual Grade)
+  if (ageGroupLabel === 'Belum Sekolah / PAUD') return 30;
+  if (ageGroupLabel === 'TK A') return 31;
+  if (ageGroupLabel === 'TK B') return 32;
+  if (ageGroupLabel === 'SD Kelas 1') return 33;
+  if (ageGroupLabel === 'SD Kelas 2') return 34;
+  if (ageGroupLabel === 'SD Kelas 3') return 35;
+  if (ageGroupLabel === 'SD Kelas 4') return 36;
+  if (ageGroupLabel === 'SD Kelas 5') return 37;
+  if (ageGroupLabel === 'SD Kelas 6') return 38;
+  if (ageGroupLabel === 'SMP Kelas VII') return 39;
+  if (ageGroupLabel === 'SMP Kelas VIII') return 40;
+  if (ageGroupLabel === 'SMP Kelas IX') return 41;
+  if (ageGroupLabel === 'SMA Kelas X') return 42;
+  if (ageGroupLabel === 'SMA Kelas XI') return 43;
+  if (ageGroupLabel === 'SMA Kelas XII') return 44;
+  if (ageGroupLabel === 'Lulus / Mahasiswa / Umum') return 45;
+
   if (ageGroupLabel === "Ungrouped Grade") return 97;
   if (ageGroupLabel === "Grade Not Specified") return 98;
   

@@ -329,7 +329,7 @@ const EventProgramPage: React.FC = () => {
               heats={heats} 
               onEditLane={canManageEvent ? handleOpenEditLaneModal : () => {}}
               showEditButton={canManageEvent}
-              isGradeSystem={event?.categorySystem === 'GRADE'}
+              isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}
             />
           </section>
         );

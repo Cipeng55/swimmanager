@@ -87,6 +87,7 @@ const SwimmerFormPage: React.FC = () => {
                 ...swimmer, 
                 dob: dobString.split('T')[0],
                 gradeLevel: swimmer.gradeLevel || '',
+                schoolName: swimmer.schoolName || '',
             });
           } else {
             setError('Swimmer not found.');
@@ -126,7 +127,7 @@ const SwimmerFormPage: React.FC = () => {
     if (formErrors.clubUserId) setFormErrors(prev => ({...prev, clubUserId: undefined}));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setSwimmerData(prev => ({ ...prev, [name]: value }));
      if (formErrors[name as keyof NewSwimmer]) {
