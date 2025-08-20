@@ -38,31 +38,39 @@ const BestSwimmersPage: React.FC = () => {
       groupedByRace.get(raceKey)!.push(entry);
     });
 
-    const goldMedalsBySwimmer = new Map<string, number>();
+    const medalCountsBySwimmer = new Map<string, { gold: number; silver: number; bronze: number }>();
+    const getMedalCounts = (swimmerId: string) => {
+        if (!medalCountsBySwimmer.has(swimmerId)) {
+            medalCountsBySwimmer.set(swimmerId, { gold: 0, silver: 0, bronze: 0 });
+        }
+        return medalCountsBySwimmer.get(swimmerId)!;
+    };
 
     groupedByRace.forEach((raceEntries) => {
-      const timeSortableEntries = raceEntries
+      const timeSortableEntries: ResultEntry[] = raceEntries
         .filter(entry => {
           const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-          const isDQ_DNS_DNF_SP = entry.remarks && ['DQ', 'DNS', 'DNF', 'SP'].includes(entry.remarks.toUpperCase());
-          return hasValidTime && !isDQ_DNS_DNF_SP;
+          const isExcludedRemark = entry.remarks && ['DQ', 'DNS', 'DNF', 'SP'].includes(entry.remarks.toUpperCase());
+          return hasValidTime && !isExcludedRemark;
         })
         .sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
+      
+      let rankCounter = 1;
+      timeSortableEntries.forEach(entry => entry.rank = rankCounter++);
 
-      if (timeSortableEntries.length > 0) {
-        const winner = timeSortableEntries[0];
-        goldMedalsBySwimmer.set(winner.swimmerId, (goldMedalsBySwimmer.get(winner.swimmerId) || 0) + 1);
-      }
+      if (timeSortableEntries[0]?.rank === 1) getMedalCounts(timeSortableEntries[0].swimmerId).gold += 1;
+      if (timeSortableEntries[1]?.rank === 2) getMedalCounts(timeSortableEntries[1].swimmerId).silver += 1;
+      if (timeSortableEntries[2]?.rank === 3) getMedalCounts(timeSortableEntries[2].swimmerId).bronze += 1;
     });
 
-    // 2. Group swimmers with gold medals by their category
-    const swimmersWithGolds = swimmers.filter(s => goldMedalsBySwimmer.has(s.id));
+    // 2. Group swimmers with medals by their category
+    const swimmersWithMedals = swimmers.filter(s => medalCountsBySwimmer.has(s.id));
     const categories = new Map<string, BestSwimmerInfo[]>();
 
-    swimmersWithGolds.forEach(swimmer => {
+    swimmersWithMedals.forEach(swimmer => {
       const ageGroup = getAgeGroup(swimmer, event);
       const categoryTitle = `${ageGroup} ${genderDisplay(swimmer.gender)}`;
-      const goldMedalCount = goldMedalsBySwimmer.get(swimmer.id) || 0;
+      const medals = medalCountsBySwimmer.get(swimmer.id)!;
 
       if (!categories.has(categoryTitle)) {
         categories.set(categoryTitle, []);
@@ -71,16 +79,30 @@ const BestSwimmersPage: React.FC = () => {
         swimmerId: swimmer.id,
         swimmerName: swimmer.name,
         swimmerClubName: swimmer.clubName,
-        goldMedalCount: goldMedalCount,
+        goldMedalCount: medals.gold,
+        silverMedalCount: medals.silver,
+        bronzeMedalCount: medals.bronze,
       });
     });
 
     // 3. Find the best swimmer(s) in each category
     const finalResult: BestSwimmerCategoryResult[] = [];
     categories.forEach((swimmersInCategory, categoryTitle) => {
-      const maxGolds = Math.max(...swimmersInCategory.map(s => s.goldMedalCount));
-      const bestInCategory = swimmersInCategory.filter(s => s.goldMedalCount === maxGolds);
-      finalResult.push({ categoryTitle, swimmers: bestInCategory });
+      swimmersInCategory.sort((a, b) => {
+        if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
+        if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
+        return b.bronzeMedalCount - a.bronzeMedalCount;
+      });
+
+      const bestSwimmerScore = swimmersInCategory[0];
+      if (bestSwimmerScore && (bestSwimmerScore.goldMedalCount > 0 || bestSwimmerScore.silverMedalCount > 0 || bestSwimmerScore.bronzeMedalCount > 0)) {
+        const bestInCategory = swimmersInCategory.filter(s => 
+            s.goldMedalCount === bestSwimmerScore.goldMedalCount &&
+            s.silverMedalCount === bestSwimmerScore.silverMedalCount &&
+            s.bronzeMedalCount === bestSwimmerScore.bronzeMedalCount
+        );
+        finalResult.push({ categoryTitle, swimmers: bestInCategory });
+      }
     });
 
     // 4. Sort the final categories
@@ -184,9 +206,11 @@ const BestSwimmersPage: React.FC = () => {
                   <div>
                     <p className="font-semibold text-gray-800 dark:text-gray-100">{swimmer.swimmerName}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{swimmer.swimmerClubName}</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      <span className="font-bold">{swimmer.goldMedalCount}</span> Medali Emas
-                    </p>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center justify-start space-x-3">
+                        <span title="Emas" className="font-bold">🥇 {swimmer.goldMedalCount}</span>
+                        <span title="Perak" className="font-bold">🥈 {swimmer.silverMedalCount}</span>
+                        <span title="Perunggu" className="font-bold">🥉 {swimmer.bronzeMedalCount}</span>
+                    </div>
                   </div>
                 </li>
               ))}

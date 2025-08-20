@@ -82,8 +82,8 @@ const PrintableBestSwimmers: React.FC = () => {
                     <AwardIcon className="h-8 w-8 text-gray-700 mb-1" />
                     <p className="font-semibold text-base">{swimmer.swimmerName}</p>
                     <p className="text-sm text-gray-600">{swimmer.swimmerClubName}</p>
-                    <p className="text-xs font-bold text-gray-800">
-                      {swimmer.goldMedalCount} Medali Emas
+                    <p className="text-xs font-bold text-gray-800 mt-1">
+                      Emas: {swimmer.goldMedalCount}, Perak: {swimmer.silverMedalCount}, Perunggu: {swimmer.bronzeMedalCount}
                     </p>
                 </li>
               ))}
