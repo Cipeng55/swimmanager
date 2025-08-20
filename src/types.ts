@@ -232,6 +232,7 @@ export interface BestSwimmerInfo {
   swimmerId: string;
   swimmerName: string;
   swimmerClubName: string;
+  swimmerSchoolName?: string;
   goldMedalCount: number;
   silverMedalCount: number;
   bronzeMedalCount: number;

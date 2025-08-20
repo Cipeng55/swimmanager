@@ -32,7 +32,7 @@ const BestSwimmersPage: React.FC = () => {
       if (!swimmer || !swimmer.dob) return;
       const ageGroup = getAgeGroup(swimmer, event);
       if (ageGroup === "Unknown Age" || ageGroup === "Grade Not Specified") return;
-      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName };
+      const entry: ResultEntry = { ...result, swimmerName: swimmer.name, swimmerClubName: swimmer.clubName, swimmerSchoolName: swimmer.schoolName };
       const raceKey = `${result.style}-${result.distance}-${swimmer.gender}-${ageGroup}`;
       if (!groupedByRace.has(raceKey)) groupedByRace.set(raceKey, []);
       groupedByRace.get(raceKey)!.push(entry);
@@ -79,6 +79,7 @@ const BestSwimmersPage: React.FC = () => {
         swimmerId: swimmer.id,
         swimmerName: swimmer.name,
         swimmerClubName: swimmer.clubName,
+        swimmerSchoolName: swimmer.schoolName,
         goldMedalCount: medals.gold,
         silverMedalCount: medals.silver,
         bronzeMedalCount: medals.bronze,
@@ -206,6 +207,9 @@ const BestSwimmersPage: React.FC = () => {
                   <div>
                     <p className="font-semibold text-gray-800 dark:text-gray-100">{swimmer.swimmerName}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{swimmer.swimmerClubName}</p>
+                    {swimmer.swimmerSchoolName && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">{swimmer.swimmerSchoolName}</p>
+                    )}
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center justify-start space-x-3">
                         <span title="Emas" className="font-bold">🥇 {swimmer.goldMedalCount}</span>
                         <span title="Perak" className="font-bold">🥈 {swimmer.silverMedalCount}</span>
