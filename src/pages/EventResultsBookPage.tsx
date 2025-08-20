@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { SwimEvent, SwimResult, Swimmer, RaceResults, ResultEntry, ResultsBookPrintData, RaceDefinition } from '../types';
@@ -220,6 +219,11 @@ const EventResultsBookPage: React.FC = () => {
           <div className='text-center sm:text-left'>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 uppercase">BUKU HASIL: {event?.name.toUpperCase()}</h1>
             <p className="text-md text-gray-600 dark:text-gray-300">{new Date(event!.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {event?.location}</p>
+             <div className="mt-2 flex items-center justify-center sm:justify-start space-x-4 text-sm font-medium">
+              <Link to={`/events/${event.id}/program`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Buku Acara</Link>
+              <span className="text-primary font-bold dark:text-primary-light">Buku Hasil</span>
+              <Link to={`/events/${event.id}/best-swimmers`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Pemain Terbaik</Link>
+            </div>
           </div>
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <Link to="/events" className="text-primary hover:underline whitespace-nowrap">&larr; Daftar Event</Link>

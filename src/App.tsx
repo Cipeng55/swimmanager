@@ -19,6 +19,8 @@ import PrintableEventProgram from './components/printable/PrintableEventProgram'
 import PrintableResultsBook from './components/printable/PrintableResultsBook';
 import ClubStartingListPage from './pages/ClubStartingListPage'; 
 import PrintableClubStartingList from './components/printable/PrintableClubStartingList';
+import BestSwimmersPage from './pages/BestSwimmersPage'; 
+import PrintableBestSwimmers from './components/printable/PrintableBestSwimmers';
 
 // Layout component for pages that share the main Navbar and Footer
 const MainAppLayout: React.FC = () => {
@@ -62,12 +64,14 @@ const App: React.FC = () => {
         <Route path="/events/:eventId/program/print" element={<PrintableEventProgram />} />
         <Route path="/events/:eventId/results-book/print" element={<PrintableResultsBook />} />
         <Route path="/events/:eventId/club-starting-list/print" element={<PrintableClubStartingList />} />
+        <Route path="/events/:eventId/best-swimmers/print" element={<PrintableBestSwimmers />} />
 
         {/* Protected Routes - Accessible by all roles */}
         <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin', 'user']} />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
           <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
+          <Route path="/events/:eventId/best-swimmers" element={<BestSwimmersPage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/club-starting-list" element={<ClubStartingListPage />} />
           {/* Swimmer and Result Management */}

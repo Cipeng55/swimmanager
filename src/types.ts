@@ -226,3 +226,22 @@ export interface ClubStartingListPrintData {
   isAdminAllClubsView: boolean; 
 }
 // --- End Club Starting List Print Types ---
+
+// --- Best Swimmers Types ---
+export interface BestSwimmerInfo {
+  swimmerId: string;
+  swimmerName: string;
+  swimmerClubName: string;
+  goldMedalCount: number;
+}
+
+export interface BestSwimmerCategoryResult {
+  categoryTitle: string; // e.g., "KU V Putra", "A. 1-2 SD/MI Putri"
+  swimmers: BestSwimmerInfo[]; // Array because of potential ties
+}
+
+export interface BestSwimmersPrintData {
+    event: SwimEvent;
+    bestSwimmers: BestSwimmerCategoryResult[];
+}
+// --- End Best Swimmers Types ---

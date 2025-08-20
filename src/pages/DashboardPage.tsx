@@ -9,6 +9,7 @@ import { ClipboardListIcon } from '../components/icons/ClipboardListIcon';
 import { PlusCircleIcon } from '../components/icons/PlusCircleIcon';
 import { ListOrderedIcon } from '../components/icons/ListOrderedIcon';
 import { TrophyIcon } from '../components/icons/TrophyIcon';
+import { AwardIcon } from '../components/icons/AwardIcon';
 import { getEvents, getSwimmers, getResults } from '../services/api'; 
 import { useAuth } from '../contexts/AuthContext';
 
@@ -177,6 +178,14 @@ const DashboardPage: React.FC = () => {
                       >
                         <TrophyIcon className="h-5 w-5" />
                         <span>Results</span>
+                      </Link>
+                      <Link
+                        to={`/events/${event.id}/best-swimmers`}
+                        className="flex items-center space-x-2 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
+                        title="Open Best Swimmers"
+                      >
+                        <AwardIcon className="h-5 w-5" />
+                        <span>Terbaik</span>
                       </Link>
                     </div>
                   </div>

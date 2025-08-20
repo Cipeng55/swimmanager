@@ -5,6 +5,7 @@ import { EditIcon } from '../components/icons/EditIcon';
 import { DeleteIcon } from '../components/icons/DeleteIcon';
 import { ListOrderedIcon } from '../components/icons/ListOrderedIcon';
 import { TrophyIcon } from '../components/icons/TrophyIcon';
+import { AwardIcon } from '../components/icons/AwardIcon';
 import { SwimEvent } from '../types';
 import { getEvents, deleteEvent as apiDeleteEvent } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -138,6 +139,14 @@ const EventsPage: React.FC = () => {
                         title="Open Results Book"
                       >
                         <TrophyIcon className="h-5 w-5" />
+                      </button>
+                       <button
+                        onClick={() => navigate(`/events/${event.id}/best-swimmers`)}
+                        className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        aria-label={`View best swimmers for ${event.name}`}
+                        title="Open Best Swimmers"
+                      >
+                        <AwardIcon className="h-5 w-5" />
                       </button>
                       {canManageEvent(event) && (
                         <>
