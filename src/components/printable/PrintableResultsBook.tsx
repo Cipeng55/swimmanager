@@ -60,49 +60,62 @@ const PrintableResultsBook: React.FC = () => {
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
       
-      const entriesWithTime: ResultEntry[] = [];
-      const entriesWithoutTime: ResultEntry[] = [];
+      const rankedEntries: ResultEntry[] = [];
+      const unrankedEntries: ResultEntry[] = [];
 
       raceEntries.forEach(entry => {
-        const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-        if (hasValidTime) {
-          entriesWithTime.push(entry);
-        } else {
-          entriesWithoutTime.push(entry);
-        }
-      });
-      
-      entriesWithTime.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-      
-      const eligibleForRanking = entriesWithTime.filter(entry => {
           const remark = (entry.remarks || '').trim().toUpperCase();
-          return !['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
+          const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
+          
+          if (hasValidTime && !['DQ', 'DNS', 'DNF', 'SP'].includes(remark)) {
+              rankedEntries.push(entry);
+          } else {
+              unrankedEntries.push(entry);
+          }
       });
 
-      const spEntries = entriesWithTime.filter(entry => (entry.remarks || '').trim().toUpperCase() === 'SP');
+      // 1. Sort and rank the eligible swimmers
+      rankedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
 
-      if (eligibleForRanking.length > 0) {
-        let lastTimeMs = -1;
-        let currentRank = 0;
-        eligibleForRanking.forEach((entry, index) => {
-            const currentTimeMs = timeToMilliseconds(entry.time!);
-            if (currentTimeMs > lastTimeMs) {
-                currentRank = index + 1; // Competition ranking (e.g., 1, 2, 2, 4)
-            }
-            entry.rank = currentRank;
-            lastTimeMs = currentTimeMs;
-        });
-      }
-      
-      const allSortedEntries = [ ...eligibleForRanking, ...spEntries, ...entriesWithoutTime]
-        .sort((a,b) => {
+      let lastTimeMs = -1;
+      let currentRank = 0;
+      rankedEntries.forEach((entry, index) => {
+          const currentTimeMs = timeToMilliseconds(entry.time!);
+          if (currentTimeMs > lastTimeMs) {
+              currentRank = index + 1;
+          }
+          entry.rank = currentRank;
+          lastTimeMs = currentTimeMs;
+      });
+
+      // 2. Sort unranked swimmers to appear at the bottom in a logical order
+      unrankedEntries.sort((a, b) => {
+          const remarkA = (a.remarks || '').toUpperCase();
+          const remarkB = (b.remarks || '').toUpperCase();
           const timeA = a.time ? timeToMilliseconds(a.time) : Infinity;
           const timeB = b.time ? timeToMilliseconds(b.time) : Infinity;
-          if(timeA !== Infinity && timeB !== Infinity) return timeA - timeB;
-          if(timeA !== Infinity) return -1;
-          if(timeB !== Infinity) return 1;
+
+          const getRemarkPriority = (remark: string) => {
+              if (remark === 'SP') return 1;
+              if (remark === 'DQ' || remark === 'DNF') return 2;
+              return 3; // DNS or no remark but no time
+          };
+
+          const priorityA = getRemarkPriority(remarkA);
+          const priorityB = getRemarkPriority(remarkB);
+
+          if (priorityA !== priorityB) {
+              return priorityA - priorityB;
+          }
+
+          if (timeA !== Infinity || timeB !== Infinity) {
+              return timeA - timeB;
+          }
+
           return a.swimmerName.localeCompare(b.swimmerName);
-        });
+      });
+
+      const allSortedEntries = [...rankedEntries, ...unrankedEntries];
 
       finalRaces.push({
         definition: { 
