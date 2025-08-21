@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { SwimEvent, SwimResult, Swimmer, ResultEntry, BestSwimmerCategoryResult, BestSwimmerInfo, BestSwimmersPrintData } from '../types';
@@ -49,13 +50,22 @@ const BestSwimmersPage: React.FC = () => {
 
     // 2. For each race, rank swimmers and award medals, correctly handling ties
     groupedByRace.forEach((raceEntries) => {
-      // Step A: Filter out swimmers not eligible for medals (SP, DQ, etc.) and sort them.
+      // Step A: Filter out swimmers not eligible for medals. This is the critical step.
       const eligibleEntries: ResultEntry[] = raceEntries
         .filter(entry => {
+          // A swimmer must have a valid, positive final time.
           const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
+          if (!hasValidTime) {
+            return false;
+          }
+          // A swimmer must not have a non-competing or disqualified status.
+          // This check robustly handles inconsistent spacing and capitalization.
           const remark = (entry.remarks || '').trim().toUpperCase();
-          const isExcludedRemark = ['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
-          return hasValidTime && !isExcludedRemark;
+          if (remark === 'SP' || remark === 'DQ' || remark === 'DNS' || remark === 'DNF') {
+            return false; // Explicitly exclude these swimmers.
+          }
+          // If all checks pass, the swimmer is eligible for ranking.
+          return true;
         })
         .sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
       
@@ -73,7 +83,7 @@ const BestSwimmersPage: React.FC = () => {
         lastTimeMs = currentTimeMs;
       });
 
-      // Step C: Award medals based on ranks in a more explicit way.
+      // Step C: Award medals based on ranks.
       const places: { [key: number]: ResultEntry[] } = { 1: [], 2: [], 3: [] };
       eligibleEntries.forEach(entry => {
           if (entry.rank === 1) places[1].push(entry);
@@ -81,15 +91,12 @@ const BestSwimmersPage: React.FC = () => {
           else if (entry.rank === 3) places[3].push(entry);
       });
 
-      // Award Gold medals for 1st place
       places[1].forEach(swimmer => getMedalCounts(swimmer.swimmerId).gold += 1);
 
-      // Award Silver medals for 2nd place, only if there's no tie for gold
       if (places[1].length === 1 && places[2].length > 0) {
           places[2].forEach(swimmer => getMedalCounts(swimmer.swimmerId).silver += 1);
       }
       
-      // Award Bronze medals for 3rd place, only if total gold/silver winners are less than 3
       const goldMedalistsCount = places[1].length;
       const silverMedalistsCount = (places[1].length === 1 && places[2].length > 0) ? places[2].length : 0;
       if ((goldMedalistsCount + silverMedalistsCount) < 3 && places[3].length > 0) {
