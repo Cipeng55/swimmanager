@@ -66,63 +66,52 @@ const EventResultsBookPage: React.FC = () => {
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
       
-      const rankedEntries: ResultEntry[] = [];
-      const unrankedEntries: ResultEntry[] = [];
+      const finalRankedEntries: ResultEntry[] = [];
+      const finalDisqualifiedEntries: ResultEntry[] = []; // DQ, DNS, DNF
+      const finalSpEntries: ResultEntry[] = []; // SP
+      const finalOtherUnranked: ResultEntry[] = []; // No time, no significant remark
 
+      // 1. Categorize all entries from the race
       raceEntries.forEach(entry => {
-          const remark = (entry.remarks || '').trim().toUpperCase();
-          const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-          
-          if (hasValidTime && !['DQ', 'DNS', 'DNF', 'SP'].includes(remark)) {
-              rankedEntries.push(entry);
-          } else {
-              unrankedEntries.push(entry);
-          }
+        const remark = (entry.remarks || '').trim().toUpperCase();
+        const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
+
+        if (['DQ', 'DNS', 'DNF'].includes(remark)) {
+          finalDisqualifiedEntries.push(entry);
+        } else if (remark === 'SP') {
+          finalSpEntries.push(entry);
+        } else if (hasValidTime) {
+          finalRankedEntries.push(entry);
+        } else {
+          finalOtherUnranked.push(entry);
+        }
       });
 
-      // 1. Sort and rank the eligible swimmers
-      rankedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-
+      // 2. Sort and Rank the main group
+      finalRankedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
       let lastTimeMs = -1;
       let currentRank = 0;
-      rankedEntries.forEach((entry, index) => {
+      finalRankedEntries.forEach((entry, index) => {
           const currentTimeMs = timeToMilliseconds(entry.time!);
           if (currentTimeMs > lastTimeMs) {
-              currentRank = index + 1;
+              currentRank = index + 1; // Competition ranking (e.g., 1, 2, 2, 4)
           }
           entry.rank = currentRank;
           lastTimeMs = currentTimeMs;
       });
 
-      // 2. Sort unranked swimmers to appear at the bottom in a logical order
-      // Order: SP (by time), then DQ/DNF (by time), then DNS/No Time (by name)
-      unrankedEntries.sort((a, b) => {
-          const remarkA = (a.remarks || '').toUpperCase();
-          const remarkB = (b.remarks || '').toUpperCase();
-          const timeA = a.time ? timeToMilliseconds(a.time) : Infinity;
-          const timeB = b.time ? timeToMilliseconds(b.time) : Infinity;
-
-          const getRemarkPriority = (remark: string) => {
-              if (remark === 'SP') return 1;
-              if (remark === 'DQ' || remark === 'DNF') return 2;
-              return 3; // DNS or no remark but no time
-          };
-
-          const priorityA = getRemarkPriority(remarkA);
-          const priorityB = getRemarkPriority(remarkB);
-
-          if (priorityA !== priorityB) {
-              return priorityA - priorityB;
-          }
-
-          if (timeA !== Infinity || timeB !== Infinity) {
-              return timeA - timeB;
-          }
-
-          return a.swimmerName.localeCompare(b.swimmerName);
-      });
-
-      const allSortedEntries = [...rankedEntries, ...unrankedEntries];
+      // 3. Sort the unranked groups for consistent display
+      finalSpEntries.sort((a, b) => timeToMilliseconds(a.time || '99:99.99') - timeToMilliseconds(b.time || '99:99.99'));
+      finalDisqualifiedEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      finalOtherUnranked.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      
+      // 4. Combine into final list
+      const allSortedEntries = [
+          ...finalRankedEntries,
+          ...finalSpEntries,
+          ...finalDisqualifiedEntries,
+          ...finalOtherUnranked
+      ];
 
       finalRaces.push({
         definition: { 
