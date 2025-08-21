@@ -78,17 +78,17 @@ const EventResultsBookPage: React.FC = () => {
         }
       });
       
-      entriesWithTime.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-      
       const eligibleForRanking = entriesWithTime.filter(entry => {
           const remark = (entry.remarks || '').trim().toUpperCase();
           return !['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
       });
+      
+      const spEntries = entriesWithTime.filter(entry => (entry.remarks || '').trim().toUpperCase() === 'SP');
 
       if (eligibleForRanking.length > 0) {
         let rankCounter = 1;
         eligibleForRanking[0].rank = rankCounter;
-
+        
         for (let i = 1; i < eligibleForRanking.length; i++) {
           const prevTime = timeToMilliseconds(eligibleForRanking[i-1].time!);
           const currTime = timeToMilliseconds(eligibleForRanking[i].time!);
@@ -100,8 +100,16 @@ const EventResultsBookPage: React.FC = () => {
         }
       }
 
-      entriesWithoutTime.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
-      
+      const allSortedEntries = [ ...eligibleForRanking, ...spEntries, ...entriesWithoutTime]
+        .sort((a,b) => {
+          const timeA = a.time ? timeToMilliseconds(a.time) : Infinity;
+          const timeB = b.time ? timeToMilliseconds(b.time) : Infinity;
+          if(timeA !== Infinity && timeB !== Infinity) return timeA - timeB;
+          if(timeA !== Infinity) return -1;
+          if(timeB !== Infinity) return 1;
+          return a.swimmerName.localeCompare(b.swimmerName);
+        });
+
       finalRaces.push({
         definition: { 
           style, 
@@ -110,7 +118,7 @@ const EventResultsBookPage: React.FC = () => {
           ageGroup,
           acaraNumber: raceKeyToAcaraNumberMap.get(raceKey)
         },
-        results: [...entriesWithTime, ...entriesWithoutTime]
+        results: allSortedEntries
       });
     });
 

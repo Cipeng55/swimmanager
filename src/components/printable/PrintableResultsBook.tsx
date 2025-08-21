@@ -79,6 +79,8 @@ const PrintableResultsBook: React.FC = () => {
           return !['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
       });
 
+      const spEntries = entriesWithTime.filter(entry => (entry.remarks || '').trim().toUpperCase() === 'SP');
+
       if (eligibleForRanking.length > 0) {
         let rankCounter = 1;
         eligibleForRanking[0].rank = rankCounter;
@@ -93,9 +95,17 @@ const PrintableResultsBook: React.FC = () => {
           eligibleForRanking[i].rank = rankCounter;
         }
       }
-
-      entriesWithoutTime.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
       
+      const allSortedEntries = [ ...eligibleForRanking, ...spEntries, ...entriesWithoutTime]
+        .sort((a,b) => {
+          const timeA = a.time ? timeToMilliseconds(a.time) : Infinity;
+          const timeB = b.time ? timeToMilliseconds(b.time) : Infinity;
+          if(timeA !== Infinity && timeB !== Infinity) return timeA - timeB;
+          if(timeA !== Infinity) return -1;
+          if(timeB !== Infinity) return 1;
+          return a.swimmerName.localeCompare(b.swimmerName);
+        });
+
       finalRaces.push({
         definition: { 
           style, 
@@ -104,7 +114,7 @@ const PrintableResultsBook: React.FC = () => {
           ageGroup,
           acaraNumber: raceKeyToAcaraNumberMap.get(raceKey)
         },
-        results: [...entriesWithTime, ...entriesWithoutTime]
+        results: allSortedEntries
       });
     });
 
