@@ -53,18 +53,14 @@ const BestSwimmersPage: React.FC = () => {
       // Step A: Filter out swimmers not eligible for medals. This is the critical step.
       const eligibleEntries: ResultEntry[] = raceEntries
         .filter(entry => {
-          // A swimmer must have a valid, positive final time.
           const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
           if (!hasValidTime) {
             return false;
           }
-          // A swimmer must not have a non-competing or disqualified status.
-          // This check robustly handles inconsistent spacing and capitalization.
           const remark = (entry.remarks || '').trim().toUpperCase();
           if (remark === 'SP' || remark === 'DQ' || remark === 'DNS' || remark === 'DNF') {
-            return false; // Explicitly exclude these swimmers.
+            return false;
           }
-          // If all checks pass, the swimmer is eligible for ranking.
           return true;
         })
         .sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
@@ -83,24 +79,25 @@ const BestSwimmersPage: React.FC = () => {
         lastTimeMs = currentTimeMs;
       });
 
-      // Step C: Award medals based on ranks.
-      const places: { [key: number]: ResultEntry[] } = { 1: [], 2: [], 3: [] };
-      eligibleEntries.forEach(entry => {
-          if (entry.rank === 1) places[1].push(entry);
-          else if (entry.rank === 2) places[2].push(entry);
-          else if (entry.rank === 3) places[3].push(entry);
-      });
+      // Step C: Award medals based on rank, correctly handling ties per competition rules.
+      const goldWinners = eligibleEntries.filter(e => e.rank === 1);
+      const silverWinners = eligibleEntries.filter(e => e.rank === 2);
+      const bronzeWinners = eligibleEntries.filter(e => e.rank === 3);
 
-      places[1].forEach(swimmer => getMedalCounts(swimmer.swimmerId).gold += 1);
+      // Award Gold medals to all rank 1 swimmers
+      goldWinners.forEach(swimmer => getMedalCounts(swimmer.swimmerId).gold += 1);
 
-      if (places[1].length === 1 && places[2].length > 0) {
-          places[2].forEach(swimmer => getMedalCounts(swimmer.swimmerId).silver += 1);
+      // Award Silver medals only if there is no tie for 1st place (i.e., only one gold medalist).
+      if (goldWinners.length <= 1) {
+        silverWinners.forEach(swimmer => getMedalCounts(swimmer.swimmerId).silver += 1);
       }
-      
-      const goldMedalistsCount = places[1].length;
-      const silverMedalistsCount = (places[1].length === 1 && places[2].length > 0) ? places[2].length : 0;
-      if ((goldMedalistsCount + silverMedalistsCount) < 3 && places[3].length > 0) {
-          places[3].forEach(swimmer => getMedalCounts(swimmer.swimmerId).bronze += 1);
+
+      // Award Bronze medals only if the top two spots are not filled by 3 or more swimmers.
+      const numGold = goldWinners.length;
+      // Silver is only awarded if gold is not a multi-way tie, so we check that condition again here.
+      const numSilver = (goldWinners.length <= 1) ? silverWinners.length : 0;
+      if (numGold + numSilver < 3) {
+        bronzeWinners.forEach(swimmer => getMedalCounts(swimmer.swimmerId).bronze += 1);
       }
     });
 
