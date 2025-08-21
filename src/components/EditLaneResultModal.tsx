@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Modal from './common/Modal';
 import FormField from './common/FormField';
@@ -79,7 +78,9 @@ const EditLaneResultModal: React.FC<EditLaneResultModalProps> = ({
     setFormError(null);
     setIsSaving(true);
     try {
-      await onSave(swimmerData.resultId, effectiveFinalTime, remarks.trim() || undefined);
+      // FIX: Pass remarks.trim() directly. `|| undefined` was causing empty strings (cleared remarks)
+      // to be omitted from the API payload, so they were not saved.
+      await onSave(swimmerData.resultId, effectiveFinalTime, remarks.trim());
     } catch (error) {
         // Error handling is managed by the parent (EventProgramPage)
     } finally {
