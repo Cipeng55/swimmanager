@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { ResultsBookPrintData, SwimEvent, RaceResults, ResultEntry, Swimmer, SwimResult, RaceDefinition } from '../../types';
@@ -60,10 +61,10 @@ const PrintableResultsBook: React.FC = () => {
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
       
-      const finalRankedEntries: ResultEntry[] = [];
+      const finalSPEntries: ResultEntry[] = []; // SP swimmers
+      const finalRankedEntries: ResultEntry[] = []; // Officially ranked swimmers
       const finalDisqualifiedEntries: ResultEntry[] = []; // DQ, DNS, DNF
-      const finalSpEntries: ResultEntry[] = []; // SP
-      const finalOtherUnranked: ResultEntry[] = []; // No time, no significant remark
+      const finalOtherUnranked: ResultEntry[] = []; // No time
 
       // 1. Categorize all entries from the race
       raceEntries.forEach(entry => {
@@ -72,17 +73,24 @@ const PrintableResultsBook: React.FC = () => {
 
         if (['DQ', 'DNS', 'DNF'].includes(remark)) {
           finalDisqualifiedEntries.push(entry);
-        } else if (remark === 'SP') {
-          finalSpEntries.push(entry);
         } else if (hasValidTime) {
-          finalRankedEntries.push(entry);
+          if (remark === 'SP') {
+            finalSPEntries.push(entry);
+          } else {
+            finalRankedEntries.push(entry);
+          }
         } else {
           finalOtherUnranked.push(entry);
         }
       });
 
-      // 2. Sort and Rank the main group
+      // 2. Sort the groups
+      finalSPEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
       finalRankedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
+      finalDisqualifiedEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      finalOtherUnranked.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      
+      // 3. Rank only the main group
       let lastTimeMs = -1;
       let currentRank = 0;
       finalRankedEntries.forEach((entry, index) => {
@@ -93,16 +101,11 @@ const PrintableResultsBook: React.FC = () => {
           entry.rank = currentRank;
           lastTimeMs = currentTimeMs;
       });
-
-      // 3. Sort the unranked groups for consistent display
-      finalSpEntries.sort((a, b) => timeToMilliseconds(a.time || '99:99.99') - timeToMilliseconds(b.time || '99:99.99'));
-      finalDisqualifiedEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
-      finalOtherUnranked.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
       
-      // 4. Combine into final list
+      // 4. Combine into final list, with SP swimmers on top
       const allSortedEntries = [
+          ...finalSPEntries,
           ...finalRankedEntries,
-          ...finalSpEntries,
           ...finalDisqualifiedEntries,
           ...finalOtherUnranked
       ];
