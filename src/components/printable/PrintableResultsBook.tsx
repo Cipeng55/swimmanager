@@ -61,53 +61,53 @@ const PrintableResultsBook: React.FC = () => {
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
       
-      const finalSPEntries: ResultEntry[] = []; // SP swimmers
-      const finalRankedEntries: ResultEntry[] = []; // Officially ranked swimmers
-      const finalDisqualifiedEntries: ResultEntry[] = []; // DQ, DNS, DNF
-      const finalOtherUnranked: ResultEntry[] = []; // No time
+      // 1. Separate entries into timed and non-timed groups.
+      const timedEntries: ResultEntry[] = [];
+      const nonTimedEntries: ResultEntry[] = [];
 
-      // 1. Categorize all entries from the race
       raceEntries.forEach(entry => {
-        const remark = (entry.remarks || '').trim().toUpperCase();
-        const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-
-        if (['DQ', 'DNS', 'DNF'].includes(remark)) {
-          finalDisqualifiedEntries.push(entry);
-        } else if (hasValidTime) {
-          if (remark === 'SP') {
-            finalSPEntries.push(entry);
+          const remark = (entry.remarks || '').trim().toUpperCase();
+          const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
+          if (hasValidTime && !['DQ', 'DNS', 'DNF'].includes(remark)) {
+              timedEntries.push(entry);
           } else {
-            finalRankedEntries.push(entry);
+              nonTimedEntries.push(entry);
           }
-        } else {
-          finalOtherUnranked.push(entry);
-        }
       });
 
-      // 2. Sort the groups
-      finalSPEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-      finalRankedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
-      finalDisqualifiedEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
-      finalOtherUnranked.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+      // 2. Sort timed entries by performance.
+      timedEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
       
-      // 3. Rank only the main group
+      // 3. Assign ranks, skipping SP swimmers but preserving their position.
+      let rankCounter = 0;
       let lastTimeMs = -1;
-      let currentRank = 0;
-      finalRankedEntries.forEach((entry, index) => {
-          const currentTimeMs = timeToMilliseconds(entry.time!);
-          if (currentTimeMs > lastTimeMs) {
-              currentRank = index + 1; // Competition ranking (e.g., 1, 2, 2, 4)
+      let swimmersAtLastRank = 1;
+
+      timedEntries.forEach((entry) => {
+          const isSP = (entry.remarks || '').trim().toUpperCase() === 'SP';
+          
+          if (!isSP) {
+              const currentTimeMs = timeToMilliseconds(entry.time!);
+              if (currentTimeMs > lastTimeMs) {
+                  rankCounter += swimmersAtLastRank;
+                  swimmersAtLastRank = 1;
+              } else { // Tie
+                  swimmersAtLastRank++;
+              }
+              entry.rank = rankCounter;
+              lastTimeMs = currentTimeMs;
+          } else {
+              entry.rank = undefined;
           }
-          entry.rank = currentRank;
-          lastTimeMs = currentTimeMs;
       });
       
-      // 4. Combine into final list, with SP swimmers on top
+      // 4. Sort non-timed entries alphabetically for consistency.
+      nonTimedEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+
+      // 5. Combine for final display order.
       const allSortedEntries = [
-          ...finalSPEntries,
-          ...finalRankedEntries,
-          ...finalDisqualifiedEntries,
-          ...finalOtherUnranked
+          ...timedEntries,
+          ...nonTimedEntries
       ];
 
       finalRaces.push({
