@@ -66,28 +66,41 @@ const EventResultsBookPage: React.FC = () => {
     groupedByRace.forEach((raceEntries, raceKey) => {
       const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
       
-      const timeSortableEntries: ResultEntry[] = [];
-      const nonTimeSortableEntries: ResultEntry[] = [];
-      
+      const entriesWithTime: ResultEntry[] = [];
+      const entriesWithoutTime: ResultEntry[] = [];
+
       raceEntries.forEach(entry => {
         const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-        const isExcludedRemark = entry.remarks && ['DQ', 'DNS', 'DNF', 'SP'].includes(entry.remarks.trim().toUpperCase());
-        
-        if (hasValidTime && !isExcludedRemark) {
-          timeSortableEntries.push(entry);
+        if (hasValidTime) {
+          entriesWithTime.push(entry);
         } else {
-          nonTimeSortableEntries.push(entry);
+          entriesWithoutTime.push(entry);
         }
       });
       
-      timeSortableEntries.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
+      entriesWithTime.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
       
-      let rankCounter = 1;
-      timeSortableEntries.forEach(entry => {
-        entry.rank = rankCounter++;
+      const eligibleForRanking = entriesWithTime.filter(entry => {
+          const remark = (entry.remarks || '').trim().toUpperCase();
+          return !['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
       });
-      
-      nonTimeSortableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
+
+      if (eligibleForRanking.length > 0) {
+        let rankCounter = 1;
+        eligibleForRanking[0].rank = rankCounter;
+
+        for (let i = 1; i < eligibleForRanking.length; i++) {
+          const prevTime = timeToMilliseconds(eligibleForRanking[i-1].time!);
+          const currTime = timeToMilliseconds(eligibleForRanking[i].time!);
+          
+          if (currTime > prevTime) {
+            rankCounter = i + 1;
+          }
+          eligibleForRanking[i].rank = rankCounter;
+        }
+      }
+
+      entriesWithoutTime.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
       
       finalRaces.push({
         definition: { 
@@ -97,7 +110,7 @@ const EventResultsBookPage: React.FC = () => {
           ageGroup,
           acaraNumber: raceKeyToAcaraNumberMap.get(raceKey)
         },
-        results: [...timeSortableEntries, ...nonTimeSortableEntries]
+        results: [...entriesWithTime, ...entriesWithoutTime]
       });
     });
 
