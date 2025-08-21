@@ -78,6 +78,8 @@ const EventResultsBookPage: React.FC = () => {
         }
       });
       
+      entriesWithTime.sort((a, b) => timeToMilliseconds(a.time!) - timeToMilliseconds(b.time!));
+
       const eligibleForRanking = entriesWithTime.filter(entry => {
           const remark = (entry.remarks || '').trim().toUpperCase();
           return !['DQ', 'DNS', 'DNF', 'SP'].includes(remark);
@@ -86,18 +88,16 @@ const EventResultsBookPage: React.FC = () => {
       const spEntries = entriesWithTime.filter(entry => (entry.remarks || '').trim().toUpperCase() === 'SP');
 
       if (eligibleForRanking.length > 0) {
-        let rankCounter = 1;
-        eligibleForRanking[0].rank = rankCounter;
-        
-        for (let i = 1; i < eligibleForRanking.length; i++) {
-          const prevTime = timeToMilliseconds(eligibleForRanking[i-1].time!);
-          const currTime = timeToMilliseconds(eligibleForRanking[i].time!);
-          
-          if (currTime > prevTime) {
-            rankCounter = i + 1;
-          }
-          eligibleForRanking[i].rank = rankCounter;
-        }
+        let lastTimeMs = -1;
+        let currentRank = 0;
+        eligibleForRanking.forEach((entry, index) => {
+            const currentTimeMs = timeToMilliseconds(entry.time!);
+            if (currentTimeMs > lastTimeMs) {
+                currentRank = index + 1; // Competition ranking (e.g., 1, 2, 2, 4)
+            }
+            entry.rank = currentRank;
+            lastTimeMs = currentTimeMs;
+        });
       }
 
       const allSortedEntries = [ ...eligibleForRanking, ...spEntries, ...entriesWithoutTime]
