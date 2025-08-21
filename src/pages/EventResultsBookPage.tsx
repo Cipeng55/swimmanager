@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { SwimEvent, SwimResult, Swimmer, RaceResults, ResultEntry, ResultsBookPrintData, RaceDefinition } from '../types';
@@ -70,9 +71,9 @@ const EventResultsBookPage: React.FC = () => {
       
       raceEntries.forEach(entry => {
         const hasValidTime = entry.time && timeToMilliseconds(entry.time) > 0;
-        const isDQ_DNS_DNF = entry.remarks && ['DQ', 'DNS', 'DNF'].includes(entry.remarks.toUpperCase());
+        const isExcludedRemark = entry.remarks && ['DQ', 'DNS', 'DNF', 'SP'].includes(entry.remarks.trim().toUpperCase());
         
-        if (hasValidTime && !isDQ_DNS_DNF) {
+        if (hasValidTime && !isExcludedRemark) {
           timeSortableEntries.push(entry);
         } else {
           nonTimeSortableEntries.push(entry);
@@ -83,11 +84,7 @@ const EventResultsBookPage: React.FC = () => {
       
       let rankCounter = 1;
       timeSortableEntries.forEach(entry => {
-        if (entry.remarks?.toUpperCase() !== 'SP') {
-          entry.rank = rankCounter++;
-        } else {
-          entry.rank = undefined; 
-        }
+        entry.rank = rankCounter++;
       });
       
       nonTimeSortableEntries.sort((a, b) => a.swimmerName.localeCompare(b.swimmerName));
