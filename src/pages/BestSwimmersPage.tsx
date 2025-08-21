@@ -1,6 +1,3 @@
-
-
-
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { SwimEvent, SwimResult, Swimmer, ResultEntry, BestSwimmerCategoryResult, BestSwimmerInfo, BestSwimmersPrintData } from '../types';
@@ -181,33 +178,39 @@ const BestSwimmersPage: React.FC = () => {
         setBestSwimmers(bestSwimmersData);
 
       } catch (err: any) {
-        console.error("Failed to load data for Best Swimmers page:", err);
-        setError(err.message || "Could not load data.");
+        console.error("Failed to load best swimmers data:", err);
+        setError(err.message || "Could not load best swimmers data.");
       } finally {
         setLoading(false);
       }
     };
-    fetchPageData();
+    if (eventId) {
+      fetchPageData();
+    }
   }, [eventId, calculateBestSwimmers]);
 
   const handlePrint = () => {
-    if (!event || bestSwimmers.length === 0) return;
-    const printData: BestSwimmersPrintData = { event, bestSwimmers };
+    if (!event || !bestSwimmers.length) return;
+
+    const printData: BestSwimmersPrintData = {
+      event,
+      bestSwimmers
+    };
     navigate(`/events/${event.id}/best-swimmers/print`, { state: { printData } });
   };
 
-  if (loading) return <LoadingSpinner text="Calculating Best Swimmers..." />;
+  if (loading) return <LoadingSpinner text="Calculating best swimmers..." />;
   if (error) return <div className="text-center py-10 text-red-500 dark:text-red-400">{error}</div>;
-  if (!event) return <div className="text-center py-10">Event not found.</div>;
+  if (!event && !loading) return <div className="text-center py-10">Event not found.</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div className='text-center sm:text-left'>
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 uppercase">PEMAIN TERBAIK: {event.name.toUpperCase()}</h1>
-            <p className="text-md text-gray-600 dark:text-gray-300">{new Date(event.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {event.location}</p>
-            <div className="mt-2 flex items-center justify-center sm:justify-start space-x-4 text-sm font-medium">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 uppercase">DAFTAR PEMAIN TERBAIK: {event?.name.toUpperCase()}</h1>
+            <p className="text-md text-gray-600 dark:text-gray-300">{new Date(event!.date).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} - {event?.location}</p>
+             <div className="mt-2 flex items-center justify-center sm:justify-start space-x-4 text-sm font-medium">
               <Link to={`/events/${event.id}/program`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Buku Acara</Link>
               <Link to={`/events/${event.id}/results-book`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Buku Hasil</Link>
               <span className="text-primary font-bold dark:text-primary-light">Pemain Terbaik</span>
@@ -216,8 +219,8 @@ const BestSwimmersPage: React.FC = () => {
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
             <Link to="/events" className="text-primary hover:underline whitespace-nowrap">&larr; Daftar Event</Link>
             {bestSwimmers.length > 0 && (
-              <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md flex items-center" title="Cetak / Simpan PDF">
-                <PrinterIcon className="h-5 w-5 mr-2" /> Cetak / Simpan PDF
+              <button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md flex items-center" title="Cetak / Simpan PDF Daftar Pemain Terbaik">
+                  <PrinterIcon className="h-5 w-5 mr-2" /> Cetak / Simpan PDF
               </button>
             )}
           </div>
@@ -225,36 +228,30 @@ const BestSwimmersPage: React.FC = () => {
       </header>
 
       {bestSwimmers.length === 0 && !loading && (
-        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-          <p className="mb-2 text-xl">Belum ada data untuk menentukan Pemain Terbaik.</p>
-          <p>Pastikan hasil akhir (final time) dan peringkat (rank) sudah dihitung di Buku Hasil.</p>
-        </div>
+         <div className="text-center text-gray-500 dark:text-gray-400 py-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+            <p className="mb-2 text-xl">Belum ada pemain terbaik yang dapat ditentukan.</p>
+            <p>Ini bisa terjadi karena belum ada hasil final yang dimasukkan, atau belum ada perenang yang berhasil meraih medali.</p>
+          </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {bestSwimmers.map((categoryResult) => (
-          <div key={categoryResult.categoryTitle} className="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold text-primary dark:text-primary-light mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-2">
+          <div key={categoryResult.categoryTitle} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-5 flex flex-col items-center text-center transform hover:-translate-y-1 transition-transform duration-300">
+            <h3 className="text-xl font-bold text-primary dark:text-primary-light mb-3">
               {categoryResult.categoryTitle}
-            </h2>
-            <ul className="space-y-3">
+            </h3>
+            <ul className="space-y-3 w-full">
               {categoryResult.swimmers.map((swimmer) => (
-                <li key={swimmer.swimmerId} className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 mt-1">
-                    <AwardIcon className="h-6 w-6 text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100">{swimmer.swimmerName}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{swimmer.swimmerClubName}</p>
+                <li key={swimmer.swimmerId} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
+                    <AwardIcon className="h-10 w-10 text-yellow-500 mx-auto mb-2" />
+                    <p className="font-semibold text-lg text-gray-800 dark:text-gray-100">{swimmer.swimmerName}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{swimmer.swimmerClubName}</p>
                     {swimmer.swimmerSchoolName && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">{swimmer.swimmerSchoolName}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{swimmer.swimmerSchoolName}</p>
                     )}
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mt-2 flex items-center justify-start space-x-3">
-                        <span title="Emas" className="font-bold">🥇 {swimmer.goldMedalCount}</span>
-                        <span title="Perak" className="font-bold">🥈 {swimmer.silverMedalCount}</span>
-                        <span title="Perunggu" className="font-bold">🥉 {swimmer.bronzeMedalCount}</span>
-                    </div>
-                  </div>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-2">
+                      🥇{swimmer.goldMedalCount} 🥈{swimmer.silverMedalCount} 🥉{swimmer.bronzeMedalCount}
+                    </p>
                 </li>
               ))}
             </ul>
