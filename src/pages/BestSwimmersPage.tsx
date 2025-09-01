@@ -8,8 +8,11 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import { PrinterIcon } from '../components/icons/PrinterIcon';
 import { AwardIcon } from '../components/icons/AwardIcon';
 
+// FIX: Updated to handle 'Other' gender correctly.
 const genderDisplay = (gender: Swimmer['gender']): string => {
-  return gender === 'Male' ? 'Putra' : 'Putri';
+  if (gender === 'Male') return 'Putra';
+  if (gender === 'Female') return 'Putri';
+  return gender;
 };
 
 const BestSwimmersPage: React.FC = () => {

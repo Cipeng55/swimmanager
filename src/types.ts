@@ -77,6 +77,7 @@ export interface Swimmer {
   id: string;
   name: string;
   dob: string; // ISO date string (e.g., "1998-03-15")
+  // FIX: Added 'Other' to support more gender identities, resolving an import error.
   gender: 'Male' | 'Female' | 'Other';
   clubName: string; // The name of the club, denormalized for display
   clubUserId: string; // The ID of the User (role 'user') that owns this swimmer

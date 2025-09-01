@@ -200,7 +200,12 @@ const EventProgramPage: React.FC = () => {
 
   const canManageEvent = currentUser?.role === 'superadmin' || (currentUser?.role === 'admin' && event?.createdByAdminId === currentUser.id);
 
-  const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => { return gender === 'Male' ? 'PUTRA' : 'PUTRI'; };
+  // FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
+  const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => {
+    if (gender === 'Male') return 'PUTRA';
+    if (gender === 'Female') return 'PUTRI';
+    return gender?.toUpperCase() || '';
+  };
 
   const handlePrintProgram = () => {
     if (!event || !numberedUniqueRaces.length) return;

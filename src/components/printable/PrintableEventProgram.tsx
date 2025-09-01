@@ -11,8 +11,11 @@ const generateRaceKey = (race: RaceDefinition): string => {
   return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
 };
 
+// FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
 const genderDisplayPrint = (gender: Swimmer['gender'] | 'Mixed'): string => {
-  return gender === 'Male' ? 'PUTRA' : 'PUTRI';
+  if (gender === 'Male') return 'PUTRA';
+  if (gender === 'Female') return 'PUTRI';
+  return gender?.toUpperCase() || '';
 };
 
 const PrintableEventProgram: React.FC = () => {

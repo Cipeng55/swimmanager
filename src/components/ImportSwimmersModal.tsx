@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import Modal from './common/Modal';
 import { ImportFeedback, RowError } from '../types';
@@ -113,7 +112,7 @@ const ImportSwimmersModal: React.FC<ImportSwimmersModalProps> = ({
   const csvInstructions = `Name,DOB,Gender,${isAdminOrSuper ? 'Club,' : ''}GradeLevel,SchoolName
 - Name: Full name of the swimmer (Text)
 - DOB: Date of Birth in YYYY-MM-DD format (e.g., 2005-12-31)
-- Gender: Must be one of 'Male', 'Female', or 'Other'
+- Gender: Must be either 'Male' or 'Female'
 ${isAdminOrSuper ? "- Club: Name of the swimmer's club (REQUIRED for your role)" : ''}
 - GradeLevel (Optional): Swimmer's school grade (e.g., "SD Kelas 1")
 - SchoolName (Optional): Full name of swimmer's school (e.g., "SDN Menteng 01")

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { NewSwimmer, Swimmer, SelectOption, User } from '../types';
@@ -8,6 +7,7 @@ import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 import { useAuth } from '../contexts/AuthContext';
 
+// FIX: Added 'Other' to align with the updated Swimmer type definition.
 const genderOptions: SelectOption[] = [
   { value: 'Male', label: 'Male' },
   { value: 'Female', label: 'Female' },
@@ -44,7 +44,7 @@ const SwimmerFormPage: React.FC = () => {
   const [swimmerData, setSwimmerData] = useState<Partial<Swimmer>>({
     name: '',
     dob: '',
-    gender: 'Other',
+    gender: 'Female',
     clubName: currentUser?.clubName || '',
     clubUserId: currentUser?.role === 'user' ? currentUser.id : '',
     gradeLevel: '',
@@ -196,7 +196,7 @@ const SwimmerFormPage: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField label="Date of Birth" id="dob" name="dob" type="date" value={(swimmerData.dob && typeof swimmerData.dob === 'string' ? swimmerData.dob : '').split('T')[0]} onChange={handleChange} error={formErrors.dob} required disabled={loading || isUnauthorized} />
-            <FormField label="Gender" id="gender" name="gender" type="select" options={genderOptions} value={swimmerData.gender || 'Other'} onChange={handleChange} error={formErrors.gender} required disabled={loading || isUnauthorized} />
+            <FormField label="Gender" id="gender" name="gender" type="select" options={genderOptions} value={swimmerData.gender || 'Female'} onChange={handleChange} error={formErrors.gender} required disabled={loading || isUnauthorized} />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

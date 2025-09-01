@@ -10,7 +10,12 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ResultsBookDisplay from '../components/ResultsBookDisplay';
 import { PrinterIcon } from '../components/icons/PrinterIcon'; 
 
-const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => { return gender === 'Male' ? 'PUTRA' : 'PUTRI'; };
+// FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
+const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => {
+  if (gender === 'Male') return 'PUTRA';
+  if (gender === 'Female') return 'PUTRI';
+  return gender?.toUpperCase() || '';
+};
 
 const generateRaceKey = (race: RaceDefinition): string => {
   return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
