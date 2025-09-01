@@ -139,6 +139,16 @@ const ResultFormPage: React.FC = () => {
     fetchRelatedData();
   }, [resultId, isEditing, currentUser]);
 
+  const selectedEvent = useMemo(() => {
+    return events.find(e => e.id === resultData.eventId);
+  }, [events, resultData.eventId]);
+
+  const availableRaceTypes = useMemo(() => {
+    if (selectedEvent?.courseType === 'LCM') {
+        return predefinedRaceTypes.filter(race => race.distance !== 25);
+    }
+    return predefinedRaceTypes;
+  }, [selectedEvent]);
 
   // Effect to initialize/update raceEntries for ADD mode based on selected swimmer/event
   useEffect(() => {
@@ -148,7 +158,7 @@ const ResultFormPage: React.FC = () => {
     const currentEventId = resultData.eventId;
     const newRaceEntries: Record<string, RaceEntryState> = {};
 
-    for (const raceType of predefinedRaceTypes) {
+    for (const raceType of availableRaceTypes) {
       let existingResultForRace: SwimResult | undefined = undefined;
       if (currentSwimmerId && currentEventId) {
         existingResultForRace = allResults.find(
@@ -178,7 +188,7 @@ const ResultFormPage: React.FC = () => {
     if (formErrors.raceEntries) {
         setFormErrors(prev => ({...prev, raceEntries: undefined}));
     }
-  }, [resultData.swimmerId, resultData.eventId, allResults, isEditing, loading]);
+  }, [resultData.swimmerId, resultData.eventId, allResults, isEditing, loading, availableRaceTypes]);
 
 
   const swimmerOptions: SelectOption[] = useMemo(() => {
@@ -447,7 +457,7 @@ const ResultFormPage: React.FC = () => {
                 <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Race(s) & Enter New Seed Times (MM:SS.ss)</legend>
                 {formErrors.raceEntries && <p className="text-xs text-red-600 dark:text-red-400 mb-1">{formErrors.raceEntries}</p>}
                 <div className="space-y-3 p-3 border dark:border-gray-600 rounded-md max-h-96 overflow-y-auto">
-                    {predefinedRaceTypes.map((raceType) => {
+                    {availableRaceTypes.map((raceType) => {
                         const entry = raceEntries[raceType.id];
                         if (!entry) return null; // Should not happen if raceEntries is initialized correctly
                         
@@ -506,7 +516,7 @@ const ResultFormPage: React.FC = () => {
             <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Race Type (Editing)</legend>
             {formErrors.selectedRaceTypeId && <p className="text-xs text-red-600 dark:text-red-400 mb-1">{formErrors.selectedRaceTypeId}</p>}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 max-h-48 overflow-y-auto p-2 border dark:border-gray-600 rounded-md">
-                {predefinedRaceTypes.map((raceType) => (
+                {availableRaceTypes.map((raceType) => (
                 <div key={`race-edit-${raceType.id}`} className="flex items-center">
                     <input
                     id={`race-edit-${raceType.id}`}

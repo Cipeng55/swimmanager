@@ -11,11 +11,11 @@ const generateRaceKey = (race: RaceDefinition): string => {
   return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
 };
 
-// FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
 const genderDisplayPrint = (gender: Swimmer['gender'] | 'Mixed'): string => {
   if (gender === 'Male') return 'PUTRA';
   if (gender === 'Female') return 'PUTRI';
-  return gender?.toUpperCase() || '';
+  if (gender === 'Mixed') return 'MIXED';
+  return '';
 };
 
 const PrintableEventProgram: React.FC = () => {
@@ -204,7 +204,7 @@ const PrintableEventProgram: React.FC = () => {
         return (
           <div key={`${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`} className="race-section mb-6">
             <h2 className="race-header text-lg font-semibold mt-4 mb-2 text-left">
-              ACARA {race.acaraNumber} - {race.distance}M {race.style.toUpperCase()} - {race.ageGroup.toUpperCase()} {genderDisplayPrint(race.gender)} - SCM
+              ACARA {race.acaraNumber} - {race.distance}M {race.style.toUpperCase()} - {race.ageGroup.toUpperCase()} {genderDisplayPrint(race.gender)} - {event.courseType || 'SCM'}
             </h2>
             {heats.map((heat) => (
               <div key={heat.heatNumber} className="heat-section mb-3">

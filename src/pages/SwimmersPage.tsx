@@ -126,8 +126,7 @@ const SwimmersPage: React.FC = () => {
         const lowerGender = genderInput.toLowerCase();
         if (lowerGender === 'male' || lowerGender === 'laki-laki' || lowerGender === 'l') validGender = 'Male';
         else if (lowerGender === 'female' || lowerGender === 'perempuan' || lowerGender === 'p') validGender = 'Female';
-        else if (lowerGender === 'other') validGender = 'Other';
-        else rowErrors.push("Gender must be 'Male', 'Female', or 'Other'.");
+        else rowErrors.push("Gender must be 'Male' or 'Female'.");
       }
       
       let clubPayload = {};

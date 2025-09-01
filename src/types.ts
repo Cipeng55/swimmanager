@@ -23,6 +23,7 @@ export interface SwimEvent {
   location: string;
   description?: string;
   lanesPerEvent?: number; // Number of lanes for this event (e.g., 4, 6, 8)
+  courseType?: 'SCM' | 'LCM'; // SCM: 25m, LCM: 50m
   categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
   createdByAdminId: string; // ID of the admin who created the event
@@ -77,8 +78,7 @@ export interface Swimmer {
   id: string;
   name: string;
   dob: string; // ISO date string (e.g., "1998-03-15")
-  // FIX: Added 'Other' to support more gender identities, resolving an import error.
-  gender: 'Male' | 'Female' | 'Other';
+  gender: 'Male' | 'Female';
   clubName: string; // The name of the club, denormalized for display
   clubUserId: string; // The ID of the User (role 'user') that owns this swimmer
   gradeLevel?: string; // e.g., "TK A", "SD Kelas 1", "SMA Kelas XII"

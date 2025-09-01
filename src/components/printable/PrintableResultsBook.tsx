@@ -8,11 +8,11 @@ import { getEventById, getResults, getSwimmers, getEventProgramOrder } from '../
 import { timeToMilliseconds } from '../../utils/timeUtils';
 import { getAgeGroup, getSortableAgeGroup } from '../../utils/ageUtils';
 
-// FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
 const genderDisplayPrint = (gender: Swimmer['gender'] | 'Mixed'): string => {
   if (gender === 'Male') return 'PUTRA';
   if (gender === 'Female') return 'PUTRI';
-  return gender?.toUpperCase() || '';
+  if (gender === 'Mixed') return 'MIXED';
+  return '';
 };
 
 const generateRaceKey = (race: RaceDefinition): string => {

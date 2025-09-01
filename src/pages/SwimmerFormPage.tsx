@@ -7,11 +7,9 @@ import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 import { useAuth } from '../contexts/AuthContext';
 
-// FIX: Added 'Other' to align with the updated Swimmer type definition.
 const genderOptions: SelectOption[] = [
   { value: 'Male', label: 'Male' },
   { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Other' },
 ];
 
 const gradeLevelOptions: SelectOption[] = [

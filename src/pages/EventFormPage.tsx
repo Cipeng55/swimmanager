@@ -20,6 +20,11 @@ const categorySystemOptions: SelectOption[] = [
   { value: 'SCHOOL_LEVEL', label: 'School Level System (Grouped Grade)' },
 ];
 
+const courseTypeOptions: SelectOption[] = [
+  { value: 'SCM', label: 'SCM (Short Course Meters - 25m)' },
+  { value: 'LCM', label: 'LCM (Long Course Meters - 50m)' },
+];
+
 const letterCategories: LetterCategory[] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 
 type LetterDOBRangesInputState = Partial<Record<LetterCategory, { startDate: string; endDate: string }>>;
@@ -39,7 +44,8 @@ const EventFormPage: React.FC = () => {
     date: '',
     location: '',
     description: '',
-    lanesPerEvent: 8, 
+    lanesPerEvent: 8,
+    courseType: 'SCM',
     categorySystem: 'KU',
     letterAgeRanges: {},
     authorizedUserIds: [],
@@ -65,6 +71,7 @@ const EventFormPage: React.FC = () => {
                         ...event, 
                         date: event.date.split('T')[0],
                         lanesPerEvent: event.lanesPerEvent || 8,
+                        courseType: event.courseType || 'SCM',
                         categorySystem: event.categorySystem || 'KU',
                         authorizedUserIds: event.authorizedUserIds || [],
                     };
@@ -102,6 +109,7 @@ const EventFormPage: React.FC = () => {
     if (!eventData.location?.trim()) errors.location = 'Event location is required.';
     if (!eventData.lanesPerEvent) errors.lanesPerEvent = 'Number of lanes is required.';
     if (!eventData.categorySystem) errors.categorySystem = 'Category system is required.';
+    if (!eventData.courseType) errors.courseType = 'Course type is required.';
     
     // Validation for authorizedUserIds is removed as it's optional.
     
@@ -193,6 +201,7 @@ const EventFormPage: React.FC = () => {
         location: eventData.location!,
         description: eventData.description,
         lanesPerEvent: eventData.lanesPerEvent || 8,
+        courseType: eventData.courseType || 'SCM',
         categorySystem: eventData.categorySystem || 'KU',
         letterAgeRanges: processedLetterAgeRanges,
         authorizedUserIds: eventData.authorizedUserIds || [],
@@ -251,6 +260,11 @@ const EventFormPage: React.FC = () => {
             value={eventData.categorySystem || 'KU'} onChange={handleChange} error={formErrors.categorySystem as string} required disabled={loading}
           />
         </div>
+        
+        <FormField
+            label="Course Type" id="courseType" name="courseType" type="select" options={courseTypeOptions}
+            value={eventData.courseType || 'SCM'} onChange={handleChange} error={formErrors.courseType as string} required disabled={loading}
+        />
 
         {/* --- Club Authorization Section --- */}
         <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-3">

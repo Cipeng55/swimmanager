@@ -200,11 +200,11 @@ const EventProgramPage: React.FC = () => {
 
   const canManageEvent = currentUser?.role === 'superadmin' || (currentUser?.role === 'admin' && event?.createdByAdminId === currentUser.id);
 
-  // FIX: Updated to handle 'Other' and 'Mixed' genders correctly.
   const genderDisplay = (gender: Swimmer['gender'] | 'Mixed'): string => {
     if (gender === 'Male') return 'PUTRA';
     if (gender === 'Female') return 'PUTRI';
-    return gender?.toUpperCase() || '';
+    if (gender === 'Mixed') return 'MIXED';
+    return '';
   };
 
   const handlePrintProgram = () => {
@@ -310,7 +310,7 @@ const EventProgramPage: React.FC = () => {
           <section key={raceKey} className="mb-10">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 text-left">
-                ACARA {race.acaraNumber} - {race.distance}M {race.style.toUpperCase()} - {race.ageGroup.toUpperCase()} {genderDisplay(race.gender)} - SCM
+                ACARA {race.acaraNumber} - {race.distance}M {race.style.toUpperCase()} - {race.ageGroup.toUpperCase()} {genderDisplay(race.gender)} - {event?.courseType || 'SCM'}
               </h2>
               {canManageEvent && (
                 <div className="flex space-x-1">
