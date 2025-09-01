@@ -248,6 +248,7 @@ const EventResultsBookPage: React.FC = () => {
               <Link to={`/events/${event.id}/program`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Buku Acara</Link>
               <span className="text-primary font-bold dark:text-primary-light">Buku Hasil</span>
               <Link to={`/events/${event.id}/best-swimmers`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Pemain Terbaik</Link>
+              <Link to={`/events/${event.id}/best-clubs`} className="text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary-light">Klub Terbaik</Link>
             </div>
           </div>
           <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">

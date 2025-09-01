@@ -6,6 +6,7 @@ import { DeleteIcon } from '../components/icons/DeleteIcon';
 import { ListOrderedIcon } from '../components/icons/ListOrderedIcon';
 import { TrophyIcon } from '../components/icons/TrophyIcon';
 import { AwardIcon } from '../components/icons/AwardIcon';
+import { UsersIcon } from '../components/icons/UsersIcon';
 import { SwimEvent } from '../types';
 import { getEvents, deleteEvent as apiDeleteEvent } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -147,6 +148,14 @@ const EventsPage: React.FC = () => {
                         title="Open Best Swimmers"
                       >
                         <AwardIcon className="h-5 w-5" />
+                      </button>
+                       <button
+                        onClick={() => navigate(`/events/${event.id}/best-clubs`)}
+                        className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        aria-label={`View best clubs for ${event.name}`}
+                        title="Open Best Clubs"
+                      >
+                        <UsersIcon className="h-5 w-5" />
                       </button>
                       {canManageEvent(event) && (
                         <>

@@ -162,7 +162,7 @@ const DashboardPage: React.FC = () => {
                         {new Date(event.date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })} &bull; {event.location}
                       </p>
                     </div>
-                    <div className="flex space-x-2 mt-3 sm:mt-0">
+                    <div className="flex flex-wrap gap-2 mt-3 sm:mt-0">
                       <Link
                         to={`/events/${event.id}/program`}
                         className="flex items-center space-x-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
@@ -185,7 +185,15 @@ const DashboardPage: React.FC = () => {
                         title="Open Best Swimmers"
                       >
                         <AwardIcon className="h-5 w-5" />
-                        <span>Terbaik</span>
+                        <span>Pemain Terbaik</span>
+                      </Link>
+                       <Link
+                        to={`/events/${event.id}/best-clubs`}
+                        className="flex items-center space-x-2 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
+                        title="Open Best Clubs"
+                      >
+                        <UsersIcon className="h-5 w-5" />
+                        <span>Klub Terbaik</span>
                       </Link>
                     </div>
                   </div>

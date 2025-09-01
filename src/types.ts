@@ -248,3 +248,18 @@ export interface BestSwimmersPrintData {
     bestSwimmers: BestSwimmerCategoryResult[];
 }
 // --- End Best Swimmers Types ---
+
+// --- Best Clubs Types ---
+export interface BestClubInfo {
+  clubName: string;
+  goldMedalCount: number;
+  silverMedalCount: number;
+  bronzeMedalCount: number;
+  rank?: number;
+}
+
+export interface BestClubsPrintData {
+    event: SwimEvent;
+    bestClubs: BestClubInfo[];
+}
+// --- End Best Clubs Types ---
