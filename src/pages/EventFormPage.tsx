@@ -6,13 +6,6 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 
-const laneOptions: SelectOption[] = [
-  { value: 4, label: '4 Lanes' },
-  { value: 5, label: '5 Lanes' },
-  { value: 6, label: '6 Lanes' },
-  { value: 8, label: '8 Lanes' },
-];
-
 const categorySystemOptions: SelectOption[] = [
   { value: 'KU', label: 'KU System (Standard Age Groups)' },
   { value: 'LETTER', label: 'Letter System (A-I, by DOB range)' },
@@ -252,8 +245,9 @@ const EventFormPage: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-            label="Number of Lanes" id="lanesPerEvent" name="lanesPerEvent" type="select" options={laneOptions}
-            value={eventData.lanesPerEvent?.toString() || '8'} onChange={handleChange} error={formErrors.lanesPerEvent as string} required disabled={loading}
+            label="Number of Lanes" id="lanesPerEvent" name="lanesPerEvent" type="number"
+            value={eventData.lanesPerEvent || 8} onChange={handleChange} error={formErrors.lanesPerEvent as string} 
+            required disabled={loading} min="1" max="12"
           />
            <FormField
             label="Category System" id="categorySystem" name="categorySystem" type="select" options={categorySystemOptions}
