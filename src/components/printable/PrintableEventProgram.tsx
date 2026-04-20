@@ -163,8 +163,8 @@ const PrintableEventProgram: React.FC = () => {
   if (!printData) return <div className="text-center py-10">No data available to print.</div>;
 
   const { event, racesWithHeats } = printData;
-  const isGradeSystemEvent = event.categorySystem === 'GRADE' || event.categorySystem === 'SCHOOL_LEVEL';
-  const isSchoolLevelSystemEvent = event.categorySystem === 'SCHOOL_LEVEL';
+  const isGradeSystemEvent = event.categorySystem === 'GRADE' || event.categorySystem === 'SCHOOL_LEVEL' || event.categorySystem === 'O2SN';
+  const isSchoolLevelSystemEvent = event.categorySystem === 'SCHOOL_LEVEL' || event.categorySystem === 'O2SN';
 
   return (
     <div className="printable-container p-4 sm:p-8 bg-white text-black">
@@ -212,7 +212,7 @@ const PrintableEventProgram: React.FC = () => {
                 <table className="min-w-full text-xs">
                   <thead>
                     <tr>
-                      <th>Lintasan</th><th>Nama</th>{isSchoolLevelSystemEvent && <th>Sekolah</th>}<th>{categoryHeaderLabel}</th><th>Club</th><th>Prestasi</th><th>Waktu Final</th><th>Keterangan</th>
+                      <th>Lintasan</th><th>Nama</th>{isSchoolLevelSystemEvent && <th>Nama Sekolah</th>}<th>{categoryHeaderLabel}</th><th>{isSchoolLevelSystemEvent ? 'Club / Instansi' : 'Club'}</th><th>Prestasi</th><th>Waktu Final</th><th>Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>

@@ -279,7 +279,7 @@ const PrintableResultsBook: React.FC = () => {
             <table className="min-w-full text-xs">
               <thead>
                 <tr>
-                  <th>Rank</th><th>Name</th>{isSchoolLevelEvent && <th>School Name</th>}<th>Club</th><th>Seed Time</th><th>Final Time</th><th>Remarks</th><th>Date Recorded</th>
+                  <th>Rank</th><th>Nama</th>{isSchoolLevelEvent && <th>Nama Sekolah</th>}<th>{isSchoolLevelEvent ? 'Club / Instansi' : 'Club'}</th><th>Seed Time</th><th>Final Time</th><th>Remarks</th><th>Date Recorded</th>
                 </tr>
               </thead>
               <tbody>
