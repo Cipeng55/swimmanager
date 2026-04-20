@@ -49,15 +49,12 @@ const SwimmerFormPage: React.FC = () => {
     schoolName: '',
   });
   
-  const [isManualClubEntry, setIsManualClubEntry] = useState(false);
-  const [manualClubName, setManualClubName] = useState('');
-  
   const [allClubs, setAllClubs] = useState<User[]>([]);
   const [clubOptions, setClubOptions] = useState<SelectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewSwimmer | 'clubUserId' | 'manualClubName', string>>>({});
+  const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewSwimmer | 'clubUserId', string>>>({});
 
   useEffect(() => {
     const loadData = async () => {
@@ -68,30 +65,21 @@ const SwimmerFormPage: React.FC = () => {
           const users = await getAllUsers();
           clubs = users.filter(u => u.role === 'user');
           setAllClubs(clubs);
-          
-          const options = clubs.map(c => ({ value: c.id, label: c.clubName || c.username }));
-          // Add manual entry option for admins
-          options.push({ value: 'MANUAL', label: '--- Input Manual (Sekolah Baru) ---' });
-          setClubOptions(options);
+          setClubOptions(clubs.map(c => ({ value: c.id, label: c.clubName || c.username })));
         }
 
         if (isEditing && swimmerId) {
           const swimmer = await getSwimmerById(swimmerId);
           if (swimmer) {
             let canEdit = false;
-            // ... auth checks ...
             if (currentUser?.role === 'superadmin') {
                 canEdit = true;
             } else if (currentUser?.role === 'user' && swimmer.clubUserId === currentUser.id) {
                 canEdit = true;
             } else if (currentUser?.role === 'admin') {
-                if (swimmer.clubUserId === currentUser.id) {
-                  canEdit = true; // Added manually by this admin
-                } else {
-                  const clubUser = clubs.find(c => c.id === swimmer.clubUserId);
-                  if (clubUser && clubUser.createdByAdminId === currentUser.id) {
-                      canEdit = true;
-                  }
+                const clubUser = clubs.find(c => c.id === swimmer.clubUserId);
+                if (clubUser && clubUser.createdByAdminId === currentUser.id) {
+                    canEdit = true;
                 }
             }
 
@@ -102,20 +90,11 @@ const SwimmerFormPage: React.FC = () => {
             }
 
             const dobString = typeof swimmer.dob === 'string' ? swimmer.dob : '';
-            
-            // Check if it's a manual entry (clubUserId doesn't exist in clubs list AND it's not the user's role 'user' ID)
-            const isManual = isAdminOrSuper && !clubs.some(c => c.id === swimmer.clubUserId);
-            if (isManual) {
-              setIsManualClubEntry(true);
-              setManualClubName(swimmer.clubName);
-            }
-
             setSwimmerData({ 
                 ...swimmer, 
                 dob: dobString.split('T')[0],
                 gradeLevel: swimmer.gradeLevel || '',
                 schoolName: swimmer.schoolName || '',
-                clubUserId: isManual ? 'MANUAL' : (swimmer.clubUserId || '')
             });
           } else {
             setError('Swimmer not found.');
@@ -134,46 +113,25 @@ const SwimmerFormPage: React.FC = () => {
   }, [swimmerId, isEditing, currentUser, isAdminOrSuper]);
 
   const validateForm = (): boolean => {
-    const errors: Partial<Record<keyof NewSwimmer | 'clubUserId' | 'manualClubName', string>> = {};
+    const errors: Partial<Record<keyof NewSwimmer | 'clubUserId', string>> = {};
     if (!swimmerData.name?.trim()) errors.name = 'Swimmer name is required.';
     if (!swimmerData.dob) errors.dob = 'Date of birth is required.';
     if (!swimmerData.gender) errors.gender = 'Gender is required.';
-    
-    if (isAdminOrSuper) {
-      if (!swimmerData.clubUserId) {
-        errors.clubUserId = 'Club selection is required for admins.';
-      } else if (swimmerData.clubUserId === 'MANUAL' && !manualClubName.trim()) {
-        errors.manualClubName = 'Manual school name is required.';
-      }
-    }
+    if (isAdminOrSuper && !swimmerData.clubUserId) errors.clubUserId = 'Club selection is required for admins.';
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleClubChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = e.target.value;
-    
-    if (selectedValue === 'MANUAL') {
-      setIsManualClubEntry(true);
-      setSwimmerData(prev => ({ ...prev, clubUserId: 'MANUAL', clubName: manualClubName }));
-    } else {
-      setIsManualClubEntry(false);
-      const selectedClub = allClubs.find(c => c.id === selectedValue);
-      setSwimmerData(prev => ({
-          ...prev,
-          clubUserId: selectedValue,
-          clubName: selectedClub?.clubName || ''
-      }));
-    }
+    const selectedClubId = e.target.value;
+    const selectedClub = allClubs.find(c => c.id === selectedClubId);
+    setSwimmerData(prev => ({
+        ...prev,
+        clubUserId: selectedClubId,
+        clubName: selectedClub?.clubName || ''
+    }));
     if (formErrors.clubUserId) setFormErrors(prev => ({...prev, clubUserId: undefined}));
-  };
-
-  const handleManualClubNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setManualClubName(value);
-    setSwimmerData(prev => ({ ...prev, clubName: value }));
-    if (formErrors.manualClubName) setFormErrors(prev => ({...prev, manualClubName: undefined}));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -202,9 +160,6 @@ const SwimmerFormPage: React.FC = () => {
 
       if (isAdminOrSuper) {
         payload.clubUserId = swimmerData.clubUserId;
-        if (swimmerData.clubUserId === 'MANUAL') {
-            payload.manualClubName = manualClubName.trim();
-        }
       }
 
       if (isEditing && 'id' in swimmerData && swimmerData.id) {
@@ -244,19 +199,14 @@ const SwimmerFormPage: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {isAdminOrSuper ? (
-            <div className="space-y-4">
-              <FormField label="Club Affiliation" id="clubUserId" name="clubUserId" type="select" options={clubOptions} value={swimmerData.clubUserId || ''} onChange={handleClubChange} error={formErrors.clubUserId} required disabled={loading || isUnauthorized} placeholder="Select a club..." />
-              {isManualClubEntry && (
-                <FormField label="Manual School Name" id="manualClubName" name="manualClubName" type="text" value={manualClubName} onChange={handleManualClubNameChange} error={formErrors.manualClubName} required placeholder="Enter school name..." disabled={loading || isUnauthorized} />
-              )}
-            </div>
+            <FormField label="Club / Instansi Pendaftar" id="clubUserId" name="clubUserId" type="select" options={clubOptions} value={swimmerData.clubUserId || ''} onChange={handleClubChange} error={formErrors.clubUserId} required disabled={loading || isUnauthorized} placeholder="Pilih Klub/Instansi..." />
           ) : (
-            <FormField label="Club Affiliation" id="clubName" name="clubName" type="text" value={swimmerData.clubName || ''} readOnly disabled />
+            <FormField label="Club / Instansi Pendaftar" id="clubName" name="clubName" type="text" value={swimmerData.clubName || ''} readOnly disabled />
           )}
-          <FormField label="Grade Level (School)" id="gradeLevel" name="gradeLevel" type="select" options={gradeLevelOptions} value={swimmerData.gradeLevel || ''} onChange={handleChange} error={formErrors.gradeLevel as string} disabled={loading || isUnauthorized} />
+          <FormField label="Tingkatan Sekolah" id="gradeLevel" name="gradeLevel" type="select" options={gradeLevelOptions} value={swimmerData.gradeLevel || ''} onChange={handleChange} error={formErrors.gradeLevel as string} disabled={loading || isUnauthorized} />
         </div>
 
-        <FormField label="School Name (Optional)" id="schoolName" name="schoolName" type="text" value={swimmerData.schoolName || ''} onChange={handleChange} disabled={loading || isUnauthorized} />
+        <FormField label="Nama Sekolah / Instansi Asal (Opsional)" id="schoolName" name="schoolName" type="text" value={swimmerData.schoolName || ''} onChange={handleChange} disabled={loading || isUnauthorized} placeholder="Contoh: SDN Mekar Jaya 01" />
 
 
         <div className="flex items-center justify-end space-x-3 pt-4 border-t dark:border-gray-700">

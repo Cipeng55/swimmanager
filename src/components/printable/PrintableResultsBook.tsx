@@ -234,7 +234,7 @@ const PrintableResultsBook: React.FC = () => {
   if (!printData) return <div className="text-center py-10">No data available to print.</div>;
 
   const { event, processedRaceResults } = printData;
-  const isSchoolLevelEvent = event.categorySystem === 'SCHOOL_LEVEL';
+  const isSchoolLevelEvent = event.categorySystem === 'SCHOOL_LEVEL' || event.categorySystem === 'O2SN';
 
   return (
     <div className="printable-container p-4 sm:p-8 bg-white text-black">

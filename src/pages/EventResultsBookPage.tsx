@@ -282,8 +282,8 @@ const EventResultsBookPage: React.FC = () => {
           </h2>
           <ResultsBookDisplay
             raceResults={raceResult}
-            isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL'}
-            isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL'}
+            isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
+            isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
           />
         </section>
       ))}

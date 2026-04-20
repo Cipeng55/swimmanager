@@ -17,22 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (req.method) {
       case 'GET': {
         let query: any = {};
-        if (authData.role === 'user' && authData.userId && authData.clubName) {
-            // A regular user (club) can see swimmers explicitly assigned to them
-            // OR swimmers manually entered by an admin with matching club name (auto-match)
-            query = {
-                $or: [
-                    { clubUserId: authData.userId },
-                    { 
-                        clubName: { $regex: new RegExp(`^${authData.clubName}$`, 'i') },
-                        // Ensure it's a manual entry by an admin, not another user's athlete
-                        clubUserId: { $ne: authData.userId } 
-                    }
-                ]
-            };
+        if (authData.role === 'user' && authData.userId) {
+          query.clubUserId = authData.userId;
         } else if (authData.role === 'admin' && authData.userId) {
-          // Admin should see swimmers from clubs they created (tenant isolation)
-          // AND swimmers they added manually (where clubUserId is their own ID).
+          // Admin should see swimmers from clubs they created (tenant isolation).
           const usersCollection = db.collection('users');
           const createdClubs = await usersCollection.find({
             role: 'user',
@@ -40,10 +28,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }).project({ _id: 1 }).toArray();
 
           const clubUserIds = createdClubs.map(club => club._id.toHexString());
-          // Include the admin's own ID for manually added swimmers
-          clubUserIds.push(authData.userId);
           
-          query.clubUserId = { $in: clubUserIds };
+          if (clubUserIds.length > 0) {
+            query.clubUserId = { $in: clubUserIds };
+          } else {
+            // If admin has created no clubs, they should see no swimmers.
+            return res.status(200).json([]);
+          }
         }
         // Superadmin falls through with an empty query to get all swimmers.
         
@@ -68,31 +59,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             clubName: authData.clubName
           };
         } else if (authData.role === 'admin' || authData.role === 'superadmin') {
-          const { clubUserId, manualClubName, ...restOfBody } = req.body;
-          
-          if (clubUserId === 'MANUAL') {
-            if (!manualClubName?.trim()) {
-              return res.status(400).json({ message: "manualClubName is required when using manual club entry." });
-            }
-            swimmerPayload = {
-              ...restOfBody,
-              clubUserId: authData.userId, // Admin owns this entry
-              clubName: manualClubName.trim(),
-            };
-          } else {
-            if (!clubUserId || !ObjectId.isValid(clubUserId)) {
-              return res.status(400).json({ message: "clubUserId is required for admins creating swimmers and must be a valid ID or 'MANUAL'." });
-            }
-            const clubUser = await db.collection('users').findOne({ _id: new ObjectId(clubUserId), role: 'user' });
-            if (!clubUser) {
-              return res.status(404).json({ message: `Club with ID ${clubUserId} not found.` });
-            }
-            swimmerPayload = {
-              ...restOfBody,
-              clubUserId: clubUser._id.toHexString(),
-              clubName: clubUser.clubName,
-            };
+          const { clubUserId, ...restOfBody } = req.body;
+          if (!clubUserId || !ObjectId.isValid(clubUserId)) {
+            return res.status(400).json({ message: "clubUserId is required for admins creating swimmers and must be a valid ID." });
           }
+          const clubUser = await db.collection('users').findOne({ _id: new ObjectId(clubUserId), role: 'user' });
+          if (!clubUser) {
+            return res.status(404).json({ message: `Club with ID ${clubUserId} not found.` });
+          }
+          swimmerPayload = {
+            ...restOfBody,
+            clubUserId: clubUser._id.toHexString(),
+            clubName: clubUser.clubName,
+          };
         } else {
           return res.status(403).json({ message: 'Forbidden: You do not have permission to create swimmers.' });
         }
