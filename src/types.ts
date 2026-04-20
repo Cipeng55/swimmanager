@@ -24,7 +24,7 @@ export interface SwimEvent {
   description?: string;
   lanesPerEvent?: number; // Number of lanes for this event (e.g., 4, 6, 8)
   courseType?: 'SCM' | 'LCM'; // SCM: 25m, LCM: 50m
-  categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL';
+  categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL' | 'O2SN';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event

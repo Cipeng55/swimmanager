@@ -11,6 +11,7 @@ const categorySystemOptions: SelectOption[] = [
   { value: 'LETTER', label: 'Letter System (A-I, by DOB range)' },
   { value: 'GRADE', label: 'Grade System (Individual Grade)' },
   { value: 'SCHOOL_LEVEL', label: 'School Level System (Grouped Grade)' },
+  { value: 'O2SN', label: 'O2SN System (SD, SMP, SMA)' },
 ];
 
 const courseTypeOptions: SelectOption[] = [

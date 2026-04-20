@@ -38,6 +38,14 @@ export const getAgeGroup = (
   if (categorySystem === 'GRADE') {
     return swimmer.gradeLevel || "Grade Not Specified";
   }
+
+  if (categorySystem === 'O2SN') {
+    const grade = swimmer.gradeLevel || '';
+    if (grade.toUpperCase().includes('SD')) return "O2SN SD";
+    if (grade.toUpperCase().includes('SMP')) return "O2SN SMP";
+    if (grade.toUpperCase().includes('SMA') || grade.toUpperCase().includes('SMK')) return "O2SN SMA/SMK";
+    return "O2SN Umum/Lainnya";
+  }
   
   if (categorySystem === 'SCHOOL_LEVEL') {
     const grade = swimmer.gradeLevel;
@@ -126,6 +134,12 @@ export const getSortableAgeGroup = (ageGroupLabel: string): number => {
   if (ageGroupLabel === "C. 5-6 SD/MI") return 22;
   if (ageGroupLabel === "D. 7-9 SMP/MTS") return 23;
   if (ageGroupLabel === "E. 10-12 SMA/MA") return 24;
+
+  // O2SN System
+  if (ageGroupLabel === "O2SN SD") return 25;
+  if (ageGroupLabel === "O2SN SMP") return 26;
+  if (ageGroupLabel === "O2SN SMA/SMK") return 27;
+  if (ageGroupLabel === "O2SN Umum/Lainnya") return 28;
   
   // GRADE System (Individual Grade)
   if (ageGroupLabel === 'Belum Sekolah / PAUD') return 30;
