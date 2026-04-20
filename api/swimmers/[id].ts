@@ -29,8 +29,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let canModify = false;
     if (authData.role === 'superadmin') {
         canModify = true;
-    } else if (authData.role === 'user' && swimmer.clubUserId?.toString() === authData.userId) {
-        canModify = true;
+    } else if (authData.role === 'user' && authData.userId && authData.clubName) {
+        if (swimmer.clubUserId?.toString() === authData.userId) {
+            canModify = true;
+        } else if (swimmer.clubName && swimmer.clubName.toLowerCase() === authData.clubName.toLowerCase()) {
+            // Auto-match: If name matches and it's not another user (it's the admin), give access
+            canModify = true;
+        }
     } else if (authData.role === 'admin' && swimmer.clubUserId) {
         // Option 1: Swimmer belongs to a club created by this admin
         const clubUser = await db.collection('users').findOne({ _id: new ObjectId(swimmer.clubUserId.toString()) });

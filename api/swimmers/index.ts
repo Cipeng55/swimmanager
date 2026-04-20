@@ -17,8 +17,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (req.method) {
       case 'GET': {
         let query: any = {};
-        if (authData.role === 'user' && authData.userId) {
-          query.clubUserId = authData.userId;
+        if (authData.role === 'user' && authData.userId && authData.clubName) {
+            // A regular user (club) can see swimmers explicitly assigned to them
+            // OR swimmers manually entered by an admin with matching club name (auto-match)
+            query = {
+                $or: [
+                    { clubUserId: authData.userId },
+                    { 
+                        clubName: { $regex: new RegExp(`^${authData.clubName}$`, 'i') },
+                        // Ensure it's a manual entry by an admin, not another user's athlete
+                        clubUserId: { $ne: authData.userId } 
+                    }
+                ]
+            };
         } else if (authData.role === 'admin' && authData.userId) {
           // Admin should see swimmers from clubs they created (tenant isolation)
           // AND swimmers they added manually (where clubUserId is their own ID).
