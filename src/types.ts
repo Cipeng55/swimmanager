@@ -237,6 +237,7 @@ export interface BestSwimmerInfo {
   goldMedalCount: number;
   silverMedalCount: number;
   bronzeMedalCount: number;
+  rank?: number;
 }
 
 export interface BestSwimmerCategoryResult {

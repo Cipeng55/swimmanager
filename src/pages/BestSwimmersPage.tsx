@@ -124,7 +124,7 @@ const BestSwimmersPage: React.FC = () => {
       });
     });
 
-    // 4. Find the best swimmer(s) in each category
+    // 4. Find the best swimmers (Top 3 Ranks) in each category
     const finalResult: BestSwimmerCategoryResult[] = [];
     categories.forEach((swimmersInCategory, categoryTitle) => {
       swimmersInCategory.sort((a, b) => {
@@ -133,14 +133,24 @@ const BestSwimmersPage: React.FC = () => {
         return b.bronzeMedalCount - a.bronzeMedalCount;
       });
 
-      const bestSwimmerScore = swimmersInCategory[0];
-      if (bestSwimmerScore && (bestSwimmerScore.goldMedalCount > 0 || bestSwimmerScore.silverMedalCount > 0 || bestSwimmerScore.bronzeMedalCount > 0)) {
-        const bestInCategory = swimmersInCategory.filter(s => 
-            s.goldMedalCount === bestSwimmerScore.goldMedalCount &&
-            s.silverMedalCount === bestSwimmerScore.silverMedalCount &&
-            s.bronzeMedalCount === bestSwimmerScore.bronzeMedalCount
-        );
-        finalResult.push({ categoryTitle, swimmers: bestInCategory });
+      // Competition ranking matching (1, 1, 3...) based on medal profile
+      let lastProfile = "";
+      let currentRank = 0;
+      
+      const rankedSwimmers = swimmersInCategory.map((swimmer, index) => {
+        const profile = `${swimmer.goldMedalCount}-${swimmer.silverMedalCount}-${swimmer.bronzeMedalCount}`;
+        if (profile !== lastProfile) {
+          currentRank = index + 1;
+          lastProfile = profile;
+        }
+        return { ...swimmer, rank: currentRank };
+      });
+
+      // Filter for top 3 positions
+      const top3Ranks = rankedSwimmers.filter(s => s.rank! <= 3);
+      
+      if (top3Ranks.length > 0) {
+        finalResult.push({ categoryTitle, swimmers: top3Ranks });
       }
     });
 
@@ -237,27 +247,42 @@ const BestSwimmersPage: React.FC = () => {
           </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {bestSwimmers.map((categoryResult) => (
-          <div key={categoryResult.categoryTitle} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-5 flex flex-col items-center text-center transform hover:-translate-y-1 transition-transform duration-300">
-            <h3 className="text-xl font-bold text-primary dark:text-primary-light mb-3">
-              {categoryResult.categoryTitle}
-            </h3>
-            <ul className="space-y-3 w-full">
-              {categoryResult.swimmers.map((swimmer) => (
-                <li key={swimmer.swimmerId} className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-md">
-                    <AwardIcon className="h-10 w-10 text-yellow-500 mx-auto mb-2" />
-                    <p className="font-semibold text-lg text-gray-800 dark:text-gray-100">{swimmer.swimmerName}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{swimmer.swimmerClubName}</p>
-                    {swimmer.swimmerSchoolName && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{swimmer.swimmerSchoolName}</p>
-                    )}
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200 mt-2">
-                      🥇{swimmer.goldMedalCount} 🥈{swimmer.silverMedalCount} 🥉{swimmer.bronzeMedalCount}
-                    </p>
-                </li>
-              ))}
-            </ul>
+          <div key={categoryResult.categoryTitle} className="bg-white dark:bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+            <div className="bg-gradient-to-r from-primary to-primary-dark p-4">
+              <h3 className="text-xl font-bold text-white text-center">
+                {categoryResult.categoryTitle}
+              </h3>
+            </div>
+            <div className="p-5">
+              <ul className="space-y-4">
+                {categoryResult.swimmers.map((swimmer) => (
+                  <li key={`${swimmer.swimmerId}-${swimmer.rank}`} className="flex items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
+                    <div className="flex-shrink-0 mr-4 text-center w-12">
+                      {swimmer.rank === 1 && <span className="text-3xl" title="Juara 1">🥇</span>}
+                      {swimmer.rank === 2 && <span className="text-3xl" title="Juara 2">🥈</span>}
+                      {swimmer.rank === 3 && <span className="text-3xl" title="Juara 3">🥉</span>}
+                      <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400">Juara {swimmer.rank}</p>
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-bold text-gray-800 dark:text-gray-100 truncate">{swimmer.swimmerName}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{swimmer.swimmerClubName}</p>
+                      {swimmer.swimmerSchoolName && (
+                          <p className="text-[10px] text-gray-500 dark:text-gray-500 italic truncate">{swimmer.swimmerSchoolName}</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 ml-2 text-right">
+                      <div className="flex flex-col text-xs font-mono font-bold">
+                        <span className="text-yellow-600">G: {swimmer.goldMedalCount}</span>
+                        <span className="text-gray-400">S: {swimmer.silverMedalCount}</span>
+                        <span className="text-orange-600">B: {swimmer.bronzeMedalCount}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         ))}
       </div>

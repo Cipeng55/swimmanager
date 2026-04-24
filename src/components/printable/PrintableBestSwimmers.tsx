@@ -76,21 +76,28 @@ const PrintableBestSwimmers: React.FC = () => {
             <h3 className="text-lg font-bold text-center border-b-2 border-gray-400 pb-2 mb-3">
               {categoryResult.categoryTitle}
             </h3>
-            <ul className="space-y-2">
+            <div className="space-y-3">
               {categoryResult.swimmers.map((swimmer) => (
-                <li key={swimmer.swimmerId} className="flex flex-col items-center text-center">
-                    <AwardIcon className="h-8 w-8 text-gray-700 mb-1" />
-                    <p className="font-semibold text-base">{swimmer.swimmerName}</p>
-                    <p className="text-sm text-gray-600">{swimmer.swimmerClubName}</p>
-                    {swimmer.swimmerSchoolName && (
-                        <p className="text-xs text-gray-600">{swimmer.swimmerSchoolName}</p>
-                    )}
-                    <p className="text-xs font-bold text-gray-800 mt-1">
-                      Emas: {swimmer.goldMedalCount}, Perak: {swimmer.silverMedalCount}, Perunggu: {swimmer.bronzeMedalCount}
-                    </p>
-                </li>
+                <div key={`${swimmer.swimmerId}-${swimmer.rank}`} className="flex items-center text-left border-b border-gray-100 last:border-0 pb-2 mb-2 last:mb-0">
+                    <div className="w-12 text-center mr-3 font-bold">
+                        {swimmer.rank === 1 && <span className="text-xl">🥇</span>}
+                        {swimmer.rank === 2 && <span className="text-xl">🥈</span>}
+                        {swimmer.rank === 3 && <span className="text-xl">🥉</span>}
+                        <p className="text-[8px] uppercase">Juara {swimmer.rank}</p>
+                    </div>
+                    <div className="flex-grow">
+                        <p className="font-bold text-sm">{swimmer.swimmerName}</p>
+                        <p className="text-xs text-gray-700">{swimmer.swimmerClubName}</p>
+                        {swimmer.swimmerSchoolName && (
+                            <p className="text-[9px] text-gray-500 italic">{swimmer.swimmerSchoolName}</p>
+                        )}
+                    </div>
+                    <div className="text-[9px] font-mono font-bold ml-2">
+                        G:{swimmer.goldMedalCount} S:{swimmer.silverMedalCount} B:{swimmer.bronzeMedalCount}
+                    </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         ))}
       </div>
