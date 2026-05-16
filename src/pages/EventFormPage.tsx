@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { NewSwimEvent, SwimEvent, SelectOption, LetterCategory, LetterAgeRange, User } from '../types';
+import { NewSwimEvent, SwimEvent, SelectOption, LetterCategory, LetterAgeRange, User, CustomGradeGroup } from '../types';
 import { addEvent, getEventById, updateEvent, getAllUsers } from '../services/api';
+import { gradeLevelOptions } from '../constants';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
@@ -12,6 +13,7 @@ const categorySystemOptions: SelectOption[] = [
   { value: 'GRADE', label: 'Grade System (Individual Grade)' },
   { value: 'SCHOOL_LEVEL', label: 'School Level System (Grouped Grade)' },
   { value: 'O2SN', label: 'O2SN System (SD, SMP, SMA)' },
+  { value: 'CUSTOM_GRADE', label: 'Custom Grade Groups (Dinamis)' },
 ];
 
 const courseTypeOptions: SelectOption[] = [
@@ -42,10 +44,12 @@ const EventFormPage: React.FC = () => {
     courseType: 'SCM',
     categorySystem: 'KU',
     letterAgeRanges: {},
+    customGradeGroups: [],
     authorizedUserIds: [],
   });
   const [allClubs, setAllClubs] = useState<User[]>([]); // All users with role 'user' are clubs
   const [letterDOBRangesInput, setLetterDOBRangesInput] = useState<LetterDOBRangesInputState>(initialLetterDOBRangesState);
+  const [customGradeGroups, setCustomGradeGroups] = useState<CustomGradeGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof NewSwimEvent | 'letterAgeRanges' | 'authorizedUserIds', string>>>({});
@@ -68,8 +72,10 @@ const EventFormPage: React.FC = () => {
                         courseType: event.courseType || 'SCM',
                         categorySystem: event.categorySystem || 'KU',
                         authorizedUserIds: event.authorizedUserIds || [],
+                        customGradeGroups: event.customGradeGroups || [],
                     };
                     setEventData(formattedEvent);
+                    setCustomGradeGroups(event.customGradeGroups || []);
                     if (event.categorySystem === 'LETTER' && event.letterAgeRanges) {
                         const inputRanges: LetterDOBRangesInputState = { ...initialLetterDOBRangesState };
                         for (const letter of letterCategories) {
@@ -167,6 +173,35 @@ const EventFormPage: React.FC = () => {
     if (formErrors.letterAgeRanges) setFormErrors(prev => ({...prev, letterAgeRanges: undefined}));
   };
 
+  const handleAddGradeGroup = () => {
+    const newGroup: CustomGradeGroup = {
+      id: crypto.randomUUID(),
+      name: '',
+      grades: []
+    };
+    setCustomGradeGroups(prev => [...prev, newGroup]);
+  };
+
+  const handleRemoveGradeGroup = (groupId: string) => {
+    setCustomGradeGroups(prev => prev.filter(g => g.id !== groupId));
+  };
+
+  const handleUpdateGradeGroupName = (groupId: string, name: string) => {
+    setCustomGradeGroups(prev => prev.map(g => g.id === groupId ? { ...g, name } : g));
+  };
+
+  const handleToggleGradeInGroup = (groupId: string, grade: string) => {
+    setCustomGradeGroups(prev => prev.map(g => {
+      if (g.id === groupId) {
+        const newGrades = g.grades.includes(grade)
+          ? g.grades.filter(gr => gr !== grade)
+          : [...g.grades, grade];
+        return { ...g, grades: newGrades };
+      }
+      return g;
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -198,6 +233,7 @@ const EventFormPage: React.FC = () => {
         courseType: eventData.courseType || 'SCM',
         categorySystem: eventData.categorySystem || 'KU',
         letterAgeRanges: processedLetterAgeRanges,
+        customGradeGroups: eventData.categorySystem === 'CUSTOM_GRADE' ? customGradeGroups : undefined,
         authorizedUserIds: eventData.authorizedUserIds || [],
       };
 
@@ -322,6 +358,78 @@ const EventFormPage: React.FC = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {eventData.categorySystem === 'CUSTOM_GRADE' && (
+            <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Custom Grade Groups</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Create custom groupings for school grades (e.g., "Grade 3-4").</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleAddGradeGroup}
+                        className="px-3 py-1 text-sm bg-primary/10 text-primary hover:bg-primary/20 rounded-md flex items-center"
+                    >
+                        + Add Group
+                    </button>
+                </div>
+
+                {customGradeGroups.length === 0 && (
+                    <div className="text-center py-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                        <p className="text-sm text-gray-500">No custom groups defined. Click "Add Group" to start.</p>
+                    </div>
+                )}
+
+                <div className="space-y-6">
+                    {customGradeGroups.map((group, idx) => (
+                        <div key={group.id} className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg relative border border-gray-200 dark:border-gray-600">
+                             <button
+                                type="button"
+                                onClick={() => handleRemoveGradeGroup(group.id)}
+                                className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1"
+                                title="Remove Group"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+
+                            <div className="mb-4 pr-8">
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Group Name</label>
+                                <input
+                                    type="text"
+                                    value={group.name}
+                                    onChange={(e) => handleUpdateGradeGroupName(group.id, e.target.value)}
+                                    placeholder="e.g., SD Kelas 3 & 4"
+                                    className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Included Grades</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {gradeLevelOptions.filter(o => o.value !== '').map(gradeOption => (
+                                        <label key={gradeOption.value} className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={group.grades.includes(gradeOption.value as string)}
+                                                onChange={() => handleToggleGradeInGroup(group.id, gradeOption.value as string)}
+                                                className="h-3 w-3 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <span className="text-gray-700 dark:text-gray-300 truncate">{gradeOption.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                {group.grades.length === 0 && (
+                                    <p className="text-[10px] text-red-500 mt-1">* Please select at least one grade.</p>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
         )}
 
         <FormField

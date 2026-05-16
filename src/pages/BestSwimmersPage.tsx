@@ -158,8 +158,8 @@ const BestSwimmersPage: React.FC = () => {
     finalResult.sort((a, b) => {
       const ageGroupA = a.categoryTitle.split(' ')[0];
       const ageGroupB = b.categoryTitle.split(' ')[0];
-      const sortA = getSortableAgeGroup(ageGroupA);
-      const sortB = getSortableAgeGroup(ageGroupB);
+      const sortA = getSortableAgeGroup(ageGroupA, event);
+      const sortB = getSortableAgeGroup(ageGroupB, event);
       if (sortA !== sortB) return sortA - sortB;
       return a.categoryTitle.localeCompare(b.categoryTitle); // Fallback sort by full title
     });

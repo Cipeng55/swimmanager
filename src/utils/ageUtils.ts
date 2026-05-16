@@ -31,10 +31,20 @@ export const calculateAge = (dobString: string, eventDateString: string): number
  */
 export const getAgeGroup = (
   swimmer: Pick<Swimmer, 'dob' | 'gradeLevel'>,
-  event: Pick<SwimEvent, 'date' | 'categorySystem' | 'letterAgeRanges'>
+  event: SwimEvent
 ): string => {
   const categorySystem = event.categorySystem || 'KU';
   
+  if (categorySystem === 'CUSTOM_GRADE') {
+    const grade = swimmer.gradeLevel;
+    if (!grade) return "Grade Not Specified";
+
+    const customGroups = event.customGradeGroups || [];
+    const matchedGroup = customGroups.find(group => group.grades.includes(grade));
+    
+    return matchedGroup ? matchedGroup.name : "Ungrouped Grade";
+  }
+
   if (categorySystem === 'GRADE') {
     return swimmer.gradeLevel || "Grade Not Specified";
   }
@@ -107,8 +117,15 @@ export const getAgeGroup = (
  * Lower numbers indicate younger/earlier groups.
  * @param ageGroupLabel The age group string label (e.g., "KU V", "A", "A. 1-2 SD/MI", "SD Kelas 1").
  * @returns A number for sorting.
+ * @param event Optional swim event to look up custom group ordering.
  */
-export const getSortableAgeGroup = (ageGroupLabel: string): number => {
+export const getSortableAgeGroup = (ageGroupLabel: string, event?: SwimEvent): number => {
+  // CUSTOM_GRADE System (Priority if event is provided)
+  if (event && event.categorySystem === 'CUSTOM_GRADE' && event.customGradeGroups) {
+    const customIdx = event.customGradeGroups.findIndex(g => g.name === ageGroupLabel);
+    if (customIdx !== -1) return 100 + customIdx; // Start custom groups at 100
+  }
+
   // KU System
   if (ageGroupLabel === "KU V") return 1;
   if (ageGroupLabel === "KU IV") return 2;

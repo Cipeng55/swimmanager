@@ -105,7 +105,7 @@ const EventProgramPage: React.FC = () => {
     const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
     
     // Sort by Age Group first
-    const ageGroupComparison = getSortableAgeGroup(a.ageGroup) - getSortableAgeGroup(b.ageGroup);
+    const ageGroupComparison = getSortableAgeGroup(a.ageGroup, event || undefined) - getSortableAgeGroup(b.ageGroup, event || undefined);
     if (ageGroupComparison !== 0) return ageGroupComparison;
 
     // Then by Style
@@ -338,8 +338,8 @@ const EventProgramPage: React.FC = () => {
               heats={heats} 
               onEditLane={canManageEvent ? handleOpenEditLaneModal : () => {}}
               showEditButton={canManageEvent}
-              isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
-              isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
+              isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN' || event?.categorySystem === 'CUSTOM_GRADE'}
+              isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN' || event?.categorySystem === 'CUSTOM_GRADE'}
             />
           </section>
         );

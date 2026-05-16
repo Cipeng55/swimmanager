@@ -21,9 +21,9 @@ const generateRaceKey = (race: RaceDefinition): string => {
   return `${race.style}-${race.distance}-${race.gender}-${race.ageGroup}`;
 };
 
-const defaultRaceSort = (a: RaceDefinition, b: RaceDefinition): number => {
+const defaultRaceSort = (a: RaceDefinition, b: RaceDefinition, event?: SwimEvent): number => {
   const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
-  const ageGroupComparison = getSortableAgeGroup(a.ageGroup) - getSortableAgeGroup(b.ageGroup);
+  const ageGroupComparison = getSortableAgeGroup(a.ageGroup, event) - getSortableAgeGroup(b.ageGroup, event);
   if (ageGroupComparison !== 0) return ageGroupComparison;
   const styleAIndex = styleOrder.indexOf(a.style);
   const styleBIndex = styleOrder.indexOf(b.style);
@@ -142,7 +142,7 @@ const EventResultsBookPage: React.FC = () => {
         if (b.definition.acaraNumber != null) return 1;
 
         const styleOrder = ['Backstroke', 'Breaststroke', 'Butterfly', 'Freestyle', 'IM', 'Kick Breaststroke', 'Kick Butterfly', 'Kick Freestyle', 'Freestyle Relay', 'Medley Relay'];
-        const ageGroupComparison = getSortableAgeGroup(a.definition.ageGroup) - getSortableAgeGroup(b.definition.ageGroup);
+        const ageGroupComparison = getSortableAgeGroup(a.definition.ageGroup, event) - getSortableAgeGroup(b.definition.ageGroup, event);
         if (ageGroupComparison !== 0) return ageGroupComparison;
         const styleAIndex = styleOrder.indexOf(a.definition.style);
         const styleBIndex = styleOrder.indexOf(b.definition.style);
@@ -206,10 +206,10 @@ const EventResultsBookPage: React.FC = () => {
                 initialRacesMap.delete(key); 
               }
             });
-            const remainingRaces = Array.from(initialRacesMap.values()).sort(defaultRaceSort);
+            const remainingRaces = Array.from(initialRacesMap.values()).sort((a, b) => defaultRaceSort(a, b, eventData));
             orderedRaces = [...orderedRaces, ...remainingRaces];
         } else {
-            orderedRaces = [...initialUniqueRaces].sort(defaultRaceSort);
+            orderedRaces = [...initialUniqueRaces].sort((a, b) => defaultRaceSort(a, b, eventData));
         }
         const numberedUniqueRaces = orderedRaces.map((race, index) => ({ ...race, acaraNumber: index + 1 }));
         const raceKeyToAcaraNumberMap = new Map(numberedUniqueRaces.map(r => [generateRaceKey(r), r.acaraNumber!]));
@@ -282,8 +282,8 @@ const EventResultsBookPage: React.FC = () => {
           </h2>
           <ResultsBookDisplay
             raceResults={raceResult}
-            isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
-            isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN'}
+            isGradeSystem={event?.categorySystem === 'GRADE' || event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN' || event?.categorySystem === 'CUSTOM_GRADE'}
+            isSchoolLevelSystem={event?.categorySystem === 'SCHOOL_LEVEL' || event?.categorySystem === 'O2SN' || event?.categorySystem === 'CUSTOM_GRADE'}
           />
         </section>
       ))}

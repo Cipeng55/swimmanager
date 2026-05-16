@@ -16,6 +16,12 @@ export interface LetterAgeRange {
   endDate?: string;   // YYYY-MM-DD
 }
 
+export interface CustomGradeGroup {
+  id: string;
+  name: string;
+  grades: string[]; // List of grade names included in this group
+}
+
 export interface SwimEvent {
   id: string;
   name: string;
@@ -24,8 +30,9 @@ export interface SwimEvent {
   description?: string;
   lanesPerEvent?: number; // Number of lanes for this event (e.g., 4, 6, 8)
   courseType?: 'SCM' | 'LCM'; // SCM: 25m, LCM: 50m
-  categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL' | 'O2SN';
+  categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL' | 'O2SN' | 'CUSTOM_GRADE';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
+  customGradeGroups?: CustomGradeGroup[]; // Defined groups for CUSTOM_GRADE system
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event
 }
