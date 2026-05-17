@@ -22,6 +22,14 @@ export interface CustomGradeGroup {
   grades: string[]; // List of grade names included in this group
 }
 
+export interface NationalRecordDefinition {
+  style: string;
+  distance: number;
+  gender: Swimmer['gender'];
+  ageGroup: string;
+  time: string; // MM:SS.ss
+}
+
 export interface SwimEvent {
   id: string;
   name: string;
@@ -33,6 +41,7 @@ export interface SwimEvent {
   categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL' | 'O2SN' | 'CUSTOM_GRADE';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
   customGradeGroups?: CustomGradeGroup[]; // Defined groups for CUSTOM_GRADE system
+  nationalRecords?: NationalRecordDefinition[]; // Records for tie-breaking
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event
 }
@@ -244,6 +253,7 @@ export interface BestSwimmerInfo {
   goldMedalCount: number;
   silverMedalCount: number;
   bronzeMedalCount: number;
+  performanceScore?: number; // Average percentage of national record
   rank?: number;
 }
 

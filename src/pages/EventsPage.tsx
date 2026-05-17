@@ -7,6 +7,7 @@ import { ListOrderedIcon } from '../components/icons/ListOrderedIcon';
 import { TrophyIcon } from '../components/icons/TrophyIcon';
 import { AwardIcon } from '../components/icons/AwardIcon';
 import { UsersIcon } from '../components/icons/UsersIcon';
+import { ClipboardCheckIcon } from '../components/icons/ClipboardCheckIcon';
 import { SwimEvent } from '../types';
 import { getEvents, deleteEvent as apiDeleteEvent } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -159,6 +160,14 @@ const EventsPage: React.FC = () => {
                       </button>
                       {canManageEvent(event) && (
                         <>
+                          <button
+                            onClick={() => navigate(`/events/${event.id}/manage-records`)}
+                            className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            aria-label={`Manage records for ${event.name}`}
+                            title="Kelola Rekor Nasional"
+                          >
+                            <ClipboardCheckIcon className="h-5 w-5" />
+                          </button>
                           <button
                             onClick={() => navigate(`/events/edit/${event.id}`)}
                             className="text-primary-dark hover:text-primary p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-light"

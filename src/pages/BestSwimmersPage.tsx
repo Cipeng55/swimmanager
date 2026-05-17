@@ -105,7 +105,35 @@ const BestSwimmersPage: React.FC = () => {
     const swimmersWithMedals = swimmers.filter(s => medalCountsBySwimmer.has(s.id));
     const categories = new Map<string, BestSwimmerInfo[]>();
 
+    // Prepare records lookup
+    const recordLookup = new Map<string, number>();
+    if (event.nationalRecords) {
+      event.nationalRecords.forEach(rec => {
+        const ms = timeToMilliseconds(rec.time);
+        if (ms > 0) recordLookup.set(`${rec.style}-${rec.distance}-${rec.gender}-${rec.ageGroup}`, ms);
+      });
+    }
+
     swimmersWithMedals.forEach(swimmer => {
+      const swimmerResults = eventResults.filter(r => r.swimmerId === swimmer.id);
+      let totalPerformanceScore = 0;
+      let racesCounted = 0;
+
+      swimmerResults.forEach(res => {
+        if (!res.time || timeToMilliseconds(res.time) <= 0) return;
+        const resTimeMs = timeToMilliseconds(res.time);
+        const ageGroup = getAgeGroup(swimmer, event);
+        const key = `${res.style}-${res.distance}-${swimmer.gender}-${ageGroup}`;
+        const recordMs = recordLookup.get(key);
+        
+        if (recordMs) {
+          // Similarity to record calculation (higher is better)
+          // Using a simple ratio * 1000
+          totalPerformanceScore += (recordMs / resTimeMs) * 1000;
+          racesCounted++;
+        }
+      });
+
       const ageGroup = getAgeGroup(swimmer, event);
       const categoryTitle = `${ageGroup} ${genderDisplay(swimmer.gender)}`;
       const medals = medalCountsBySwimmer.get(swimmer.id)!;
@@ -121,6 +149,7 @@ const BestSwimmersPage: React.FC = () => {
         goldMedalCount: medals.gold,
         silverMedalCount: medals.silver,
         bronzeMedalCount: medals.bronze,
+        performanceScore: racesCounted > 0 ? totalPerformanceScore : 0
       });
     });
 
@@ -130,15 +159,18 @@ const BestSwimmersPage: React.FC = () => {
       swimmersInCategory.sort((a, b) => {
         if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
         if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
-        return b.bronzeMedalCount - a.bronzeMedalCount;
+        if (b.bronzeMedalCount !== a.bronzeMedalCount) return b.bronzeMedalCount - a.bronzeMedalCount;
+        // Tie-breaker: Performance Score
+        return (b.performanceScore || 0) - (a.performanceScore || 0);
       });
 
-      // Competition ranking matching (1, 1, 3...) based on medal profile
+      // Competition ranking matching (1, 1, 3...) based on medal profile + performance score
       let lastProfile = "";
       let currentRank = 0;
       
       const rankedSwimmers = swimmersInCategory.map((swimmer, index) => {
-        const profile = `${swimmer.goldMedalCount}-${swimmer.silverMedalCount}-${swimmer.bronzeMedalCount}`;
+        // Include performance score in profile for tie detection (though unlikely to tie exactly)
+        const profile = `${swimmer.goldMedalCount}-${swimmer.silverMedalCount}-${swimmer.bronzeMedalCount}-${swimmer.performanceScore?.toFixed(2)}`;
         if (profile !== lastProfile) {
           currentRank = index + 1;
           lastProfile = profile;
@@ -270,6 +302,9 @@ const BestSwimmersPage: React.FC = () => {
                       <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{swimmer.swimmerClubName}</p>
                       {swimmer.swimmerSchoolName && (
                           <p className="text-[10px] text-gray-500 dark:text-gray-500 italic truncate">{swimmer.swimmerSchoolName}</p>
+                      )}
+                      {swimmer.performanceScore! > 0 && (
+                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-1">Poin Rekor: {swimmer.performanceScore?.toFixed(2)}</p>
                       )}
                     </div>
                     <div className="flex-shrink-0 ml-2 text-right">

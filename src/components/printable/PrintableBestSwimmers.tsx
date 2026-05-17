@@ -91,6 +91,9 @@ const PrintableBestSwimmers: React.FC = () => {
                         {swimmer.swimmerSchoolName && (
                             <p className="text-[9px] text-gray-500 italic">{swimmer.swimmerSchoolName}</p>
                         )}
+                        {swimmer.performanceScore! > 0 && (
+                            <p className="text-[8px] font-bold text-gray-600">Poin Rekor: {swimmer.performanceScore?.toFixed(2)}</p>
+                        )}
                     </div>
                     <div className="text-[9px] font-mono font-bold ml-2">
                         G:{swimmer.goldMedalCount} S:{swimmer.silverMedalCount} B:{swimmer.bronzeMedalCount}
