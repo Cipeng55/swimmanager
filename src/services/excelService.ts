@@ -115,65 +115,167 @@ export const exportEventToExcel = (
   XLSX.writeFile(wb, `${event.name.replace(/\s+/g, '_')}_Official_Book.xlsx`);
 };
 
-// Helper for detailed Program export
-export const generateDetailedProgramData = (event: SwimEvent, groupedRaces: any[]) => {
+// Helper for professional Program export matching PDF/Image layout
+export const generateProfessionalProgramData = (event: SwimEvent, racesWithHeats: { race: RaceDefinition; heats: Heat[] }[]) => {
     const data: any[] = [
         [event.name.toUpperCase()],
-        [`LAPORAN BUKU ACARA (PROGRAM)`],
-        [`Sistem Kategori: ${event.categorySystem}`],
+        [`${event.date ? new Date(event.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''} - ${event.location || ''}`],
+        [`Sistem Kategori: ${event.categorySystem || 'KU'} | Lintasan: ${event.lanesPerEvent || 4} | Course: ${event.courseType || 'SCM'}`],
         [],
-        ['Acara #', 'Race', 'Lintasan', 'Nama Atlet', 'Sekolah/Club', 'Waktu Masuk']
     ];
 
-    groupedRaces.forEach((group, idx) => {
-        const { definition, heats } = group;
-        const raceInfo = `${definition.distance}m ${definition.style} ${definition.gender} ${definition.ageGroup}`;
+    const isO2SN = event.categorySystem === 'O2SN' || event.categorySystem === 'SCHOOL_LEVEL';
+
+    racesWithHeats.forEach((group) => {
+        const { race, heats } = group;
+        const raceHeader = `ACARA ${race.acaraNumber} - ${race.distance}M ${race.style.toUpperCase()} - ${race.ageGroup.toUpperCase()} ${race.gender === 'Male' ? 'PUTRA' : race.gender === 'Female' ? 'PUTRI' : 'MIXED'}`;
         
-        heats.forEach((heat: any) => {
-            heat.lanes.forEach((lane: any) => {
+        data.push([raceHeader]);
+        data.push([]); // Gap before seri
+
+        heats.forEach((heat) => {
+            data.push([`SERI ${heat.heatNumber}`]);
+            // Table Header for this seri
+            if (isO2SN) {
+                data.push(['Lintasan', 'Nama', 'Nama Sekolah', 'Grade', 'Club / Instansi', 'Prestasi', 'Waktu Final', 'Keterangan']);
+            } else {
+                data.push(['Lintasan', 'Nama', 'Club', 'Seed Time', 'Waktu Final', 'Keterangan']);
+            }
+            
+            heat.lanes.forEach((lane) => {
                 if (lane.swimmer) {
-                    data.push([
-                        definition.acaraNumber || (idx + 1),
-                        raceInfo,
-                        lane.laneNumber,
-                        lane.swimmer.name,
-                        lane.swimmer.schoolName || '-',
-                        lane.entryTime || 'NT'
-                    ]);
+                    if (isO2SN) {
+                        data.push([
+                            lane.lane,
+                            lane.swimmer.name.toUpperCase(),
+                            lane.swimmer.schoolName || '-',
+                            lane.swimmer.swimmerGradeLevel || '-',
+                            lane.swimmer.clubName || '-',
+                            lane.swimmer.seedTimeStr || 'NT',
+                            lane.swimmer.finalTimeStr || '-',
+                            lane.swimmer.remarks || '-'
+                        ]);
+                    } else {
+                        data.push([
+                            lane.lane,
+                            lane.swimmer.name.toUpperCase(),
+                            lane.swimmer.clubName || '-',
+                            lane.swimmer.seedTimeStr || 'NT',
+                            lane.swimmer.finalTimeStr || '-',
+                            lane.swimmer.remarks || '-'
+                        ]);
+                    }
+                } else {
+                    // Empty lane row
+                    if (isO2SN) {
+                        data.push([lane.lane, '', '', '', '', '', '', '']);
+                    } else {
+                        data.push([lane.lane, '', '', '', '', '']);
+                    }
                 }
             });
-            data.push([]); // Space between heats
+            data.push([]); // Gap after each Seri
         });
+        data.push([]); // Double gap after each Acara
     });
 
     return data;
 };
 
-export const generateDetailedResultsData = (event: SwimEvent, resultsByRace: any[]) => {
+export const generateProfessionalResultsData = (event: SwimEvent, resultsByRace: { definition: any; results: any[] }[]) => {
     const data: any[] = [
         [event.name.toUpperCase()],
-        [`LAPORAN BUKU HASIL (RESULTS)`],
-        [`Sistem Kategori: ${event.categorySystem}`],
+        [`HASIL RESMI (OFFICIAL RESULTS)`],
+        [`Sistem Kategori: ${event.categorySystem || 'KU'}`],
         [],
-        ['Acara #', 'Race', 'Rank', 'Nama Atlet', 'Sekolah/Club', 'Waktu Akhir', 'Status']
     ];
 
-    resultsByRace.forEach((raceResult, idx) => {
+    const isO2SN = event.categorySystem === 'O2SN' || event.categorySystem === 'SCHOOL_LEVEL';
+
+    resultsByRace.forEach((raceResult) => {
         const { definition, results } = raceResult;
-        const raceInfo = `${definition.distance}m ${definition.style} ${definition.gender} ${definition.ageGroup}`;
+        const raceHeader = `ACARA ${definition.acaraNumber} - ${definition.distance}M ${definition.style.toUpperCase()} - ${definition.ageGroup.toUpperCase()} ${definition.gender === 'Male' ? 'PUTRA' : definition.gender === 'Female' ? 'PUTRI' : 'MIXED'}`;
+        
+        data.push([raceHeader]);
+        if (isO2SN) {
+            data.push(['Rank', 'Nama Atlet', 'Nama Sekolah', 'Club', 'Seed Time', 'Waktu Akhir', 'Status']);
+        } else {
+            data.push(['Rank', 'Nama Atlet', 'Club', 'Seed Time', 'Waktu Akhir', 'Status']);
+        }
         
         results.forEach((res: any) => {
+            if (isO2SN) {
+                data.push([
+                    res.rank || (res.remarks || '-'),
+                    res.swimmerName.toUpperCase(),
+                    res.swimmerSchoolName || '-',
+                    res.swimmerClubName || '-',
+                    res.seedTimeStr || 'NT',
+                    res.time || 'NT',
+                    res.remarks || 'OK'
+                ]);
+            } else {
+                data.push([
+                    res.rank || (res.remarks || '-'),
+                    res.swimmerName.toUpperCase(),
+                    res.swimmerClubName || '-',
+                    res.seedTimeStr || 'NT',
+                    res.time || 'NT',
+                    res.remarks || 'OK'
+                ]);
+            }
+        });
+        data.push([]); // Gap between races
+    });
+
+    return data;
+};
+
+export const generateProfessionalBestSwimmersData = (event: SwimEvent, bestSwimmersByCategory: Map<string, any[]>) => {
+    const data: any[] = [
+        [event.name.toUpperCase()],
+        [`DAFTAR PEMAIN TERBAIK / BEST SWIMMERS`],
+        [],
+    ];
+
+    bestSwimmersByCategory.forEach((list, category) => {
+        data.push([category.toUpperCase()]);
+        data.push(['Rank', 'Nama Atlet', 'Sekolah/Club', 'Emas', 'Perak', 'Perunggu', 'Poin Rekor']);
+        
+        list.forEach((s, idx) => {
             data.push([
-                definition.acaraNumber || (idx + 1),
-                raceInfo,
-                res.rank,
-                res.swimmerName,
-                res.swimmerSchoolName || '-',
-                res.time,
-                res.status || 'OK'
+                idx + 1,
+                s.swimmerName.toUpperCase(),
+                s.swimmerSchoolName || s.swimmerClubName || '-',
+                s.goldMedalCount,
+                s.silverMedalCount,
+                s.bronzeMedalCount,
+                s.performanceScore?.toFixed(2) || '0.00'
             ]);
         });
-        data.push([]); // Space between races
+        data.push([]);
+    });
+
+    return data;
+};
+
+export const generateProfessionalClubsData = (event: SwimEvent, clubMedals: any[]) => {
+    const data: any[] = [
+        [event.name.toUpperCase()],
+        [`KLASEMEN PEROLEHAN MEDALI CLUB / SEKOLAH`],
+        [],
+        ['Rank', 'Nama Club/Sekolah', 'Emas', 'Perak', 'Perunggu', 'Total Medals']
+    ];
+
+    clubMedals.forEach((c, idx) => {
+        data.push([
+            idx + 1,
+            c.clubName.toUpperCase(),
+            c.gold,
+            c.silver,
+            c.bronze,
+            c.total
+        ]);
     });
 
     return data;

@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { SwimEvent, SwimResult, Swimmer, User, BestSwimmerInfo, ClubMedalInfo, RaceDefinition } from '../types';
-import { getEventById, getResults, getSwimmers, getAllUsers } from '../services/api';
+import { SwimEvent, SwimResult, Swimmer, User, BestSwimmerInfo, RaceDefinition, SeededSwimmerInfo, Heat, ResultEntry } from '../types';
+import { getEventById, getResults, getSwimmers, getAllUsers, getEventProgramOrder } from '../services/api';
 import { getAgeGroup, getSortableAgeGroup } from '../utils/ageUtils';
-import { exportEventToExcel, generateDetailedProgramData, generateDetailedResultsData } from '../services/excelService';
+import { generateHeats } from '../utils/seedingUtils';
+import { timeToMilliseconds } from '../utils/timeUtils';
+import { processResultsForRankings } from '../utils/resultUtils';
+import { 
+    exportEventToExcel, 
+    generateProfessionalProgramData, 
+    generateProfessionalResultsData,
+    generateProfessionalBestSwimmersData,
+    generateProfessionalClubsData
+} from '../services/excelService';
 import * as XLSX from 'xlsx';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -38,170 +47,186 @@ const OfficialReportPage: React.FC = () => {
     fetchData();
   }, [eventId]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!event) return;
 
-    // 1. Process Program Data
-    // (Logic simplified to get race groups)
-    const raceMap = new Map<string, { definition: RaceDefinition; lanes: any[] }>();
+    // 1. Group by Race and Generate Heats
+    const raceMap = new Map<string, { definition: RaceDefinition; seededSwimmers: SeededSwimmerInfo[] }>();
+    
     results.forEach(res => {
         const swimmer = swimmers.find(s => s.id === res.swimmerId);
-        if (!swimmer) return;
+        if (!swimmer || !res.seedTime) return;
         const ageGroup = getAgeGroup(swimmer, event);
         const key = `${res.style}-${res.distance}-${swimmer.gender}-${ageGroup}`;
         
         if (!raceMap.has(key)) {
             raceMap.set(key, {
                 definition: { style: res.style, distance: res.distance, gender: swimmer.gender, ageGroup },
-                lanes: []
+                seededSwimmers: []
             });
         }
-        raceMap.get(key)!.lanes.push({ swimmer, entryTime: res.entryTime, laneNumber: res.laneNumber });
+        
+        raceMap.get(key)!.seededSwimmers.push({
+            resultId: res.id,
+            swimmerId: swimmer.id,
+            name: swimmer.name,
+            clubName: swimmer.clubName,
+            gender: swimmer.gender,
+            ageGroup: ageGroup,
+            seedTimeMs: timeToMilliseconds(res.seedTime),
+            seedTimeStr: res.seedTime,
+            swimmerDob: swimmer.dob,
+            swimmerGradeLevel: swimmer.gradeLevel,
+            schoolName: swimmer.schoolName,
+            finalTimeStr: res.time,
+            remarks: res.remarks
+        });
     });
 
-    const sortedRaces = Array.from(raceMap.values()).sort((a, b) => {
-        const ageComp = getSortableAgeGroup(a.definition.ageGroup, event) - getSortableAgeGroup(b.definition.ageGroup, event);
-        if (ageComp !== 0) return ageComp;
-        return a.definition.style.localeCompare(b.definition.style);
-    });
-
-    const programData = generateDetailedProgramData(event, sortedRaces.map(r => ({ ...r, heats: [{ lanes: r.lanes }] })));
-
-    // 2. Process Results Data
-    const resultsByRace = sortedRaces.map(r => {
-        const raceResults = results.filter(res => {
-            const s = swimmers.find(sw => sw.id === res.swimmerId);
-            return s && getAgeGroup(s, event) === r.definition.ageGroup && res.style === r.definition.style && res.distance === r.definition.distance;
-        }).map(res => {
-            const s = swimmers.find(sw => sw.id === res.swimmerId);
-            return {
-                swimmerName: s?.name || 'Unknown',
-                swimmerSchoolName: s?.schoolName || '-',
-                time: res.time || 'NT',
-                status: res.status || 'OK',
-                rank: res.finalRank || 0
-            };
-        }).sort((a, b) => (a.rank || 999) - (b.rank || 999));
-
-        return { definition: r.definition, results: raceResults };
-    });
-
-    const resultsData = generateDetailedResultsData(event, resultsByRace);
-
-    // 3. Process Best Swimmers (Logic from BestSwimmersPage)
-    const medalCountsBySwimmer = new Map<string, { gold: number; silver: number; bronze: number }>();
-    results.forEach(res => {
-      if (res.finalRank === 1 || res.finalRank === 2 || res.finalRank === 3) {
-        if (!medalCountsBySwimmer.has(res.swimmerId)) {
-          medalCountsBySwimmer.set(res.swimmerId, { gold: 0, silver: 0, bronze: 0 });
-        }
-        const counts = medalCountsBySwimmer.get(res.swimmerId)!;
-        if (res.finalRank === 1) counts.gold++;
-        else if (res.finalRank === 2) counts.silver++;
-        else counts.bronze++;
-      }
-    });
-
-    const recordLookup = new Map<string, number>();
-    if (event.nationalRecords) {
-      event.nationalRecords.forEach(rec => {
-        const parts = rec.time.split(/[:.]/);
-        let ms = 0;
-        if (parts.length === 3) {
-          ms = (parseInt(parts[0]) * 60000) + (parseInt(parts[1]) * 1000) + (parseInt(parts[2]) * 10);
-        }
-        if (ms > 0) recordLookup.set(`${rec.style}-${rec.distance}-${rec.gender}-${rec.ageGroup}`, ms);
-      });
+    // Sort races (default or custom)
+    let customOrderedKeys: string[] | null = null;
+    try {
+        customOrderedKeys = await getEventProgramOrder(event.id);
+    } catch (e) {
+        console.error("Failed to fetch custom order", e);
     }
 
-    const swimmersInCategory = new Map<string, BestSwimmerInfo[]>();
-    
-    // Help helper for time conversion
-    const timeToMs = (timeStr: string) => {
-        const parts = timeStr.split(/[:.]/);
-        if (parts.length === 3) {
-            return (parseInt(parts[0]) * 60000) + (parseInt(parts[1]) * 1000) + (parseInt(parts[2]) * 10);
-        }
-        return 0;
-    };
+    let sortedRaces: { definition: RaceDefinition; seededSwimmers: SeededSwimmerInfo[] }[] = [];
+    const initialRaces = Array.from(raceMap.values());
 
-    swimmers.forEach(swimmer => {
-      if (medalCountsBySwimmer.has(swimmer.id)) {
-        const ageGroup = getAgeGroup(swimmer, event);
-        const categoryKey = `${ageGroup} ${swimmer.gender === 'Male' ? 'Putra' : 'Putri'}`;
-        const medals = medalCountsBySwimmer.get(swimmer.id)!;
-        
-        // Performance Score Calculation
-        let totalPerf = 0;
-        let count = 0;
-        results.filter(r => r.swimmerId === swimmer.id).forEach(res => {
-            if (!res.time) return;
-            const resMs = timeToMs(res.time);
-            const key = `${res.style}-${res.distance}-${swimmer.gender}-${ageGroup}`;
-            const recMs = recordLookup.get(key);
-            if (recMs && resMs > 0) {
-                totalPerf += (recMs / resMs) * 1000;
-                count++;
+    if (customOrderedKeys && customOrderedKeys.length > 0) {
+        const raceKeysMap = new Map(initialRaces.map(r => [`${r.definition.style}-${r.definition.distance}-${r.definition.gender}-${r.definition.ageGroup}`, r]));
+        customOrderedKeys.forEach(key => {
+            if (raceKeysMap.has(key)) {
+                sortedRaces.push(raceKeysMap.get(key)!);
+                raceKeysMap.delete(key);
             }
         });
-
-        if (!swimmersInCategory.has(categoryKey)) {
-          swimmersInCategory.set(categoryKey, []);
-        }
-        swimmersInCategory.get(categoryKey)!.push({
-          swimmerId: swimmer.id,
-          swimmerName: swimmer.name,
-          swimmerSchoolName: swimmer.schoolName,
-          categoryTitle: categoryKey,
-          goldMedalCount: medals.gold,
-          silverMedalCount: medals.silver,
-          bronzeMedalCount: medals.bronze,
-          performanceScore: count > 0 ? totalPerf : 0
+        // Add remaining
+        const remaining = Array.from(raceKeysMap.values()).sort((a,b) => getSortableAgeGroup(a.definition.ageGroup, event) - getSortableAgeGroup(b.definition.ageGroup, event));
+        sortedRaces = [...sortedRaces, ...remaining];
+    } else {
+        sortedRaces = initialRaces.sort((a, b) => {
+            const ageComp = getSortableAgeGroup(a.definition.ageGroup, event) - getSortableAgeGroup(b.definition.ageGroup, event);
+            if (ageComp !== 0) return ageComp;
+            return a.definition.style.localeCompare(b.definition.style);
         });
-      }
+    }
+
+    const racesWithHeats = sortedRaces.map((r, idx) => ({
+        race: { ...r.definition, acaraNumber: idx + 1 },
+        heats: generateHeats(r.seededSwimmers, event.lanesPerEvent || 4)
+    })).filter(rh => rh.heats.length > 0);
+
+    const programData = generateProfessionalProgramData(event, racesWithHeats);
+
+    // 2. Process Results Data per Race
+    const resultsByRace = processResultsForRankings(event, results, swimmers).map((pr, idx) => ({
+      ...pr,
+      definition: { ...pr.definition, acaraNumber: idx + 1 }
+    }));
+
+    const resultsData = generateProfessionalResultsData(event, resultsByRace);
+
+    // 3. Process Best Swimmers
+    const swimmersInCategory = new Map<string, BestSwimmerInfo[]>();
+    
+    // Group results by category title (e.g. "KU 1 PUTRA")
+    const resultsByCategory = new Map<string, SwimResult[]>();
+    results.forEach(res => {
+        const s = swimmers.find(sw => sw.id === res.swimmerId);
+        if (!s) return;
+        const cat = `${getAgeGroup(s, event)} ${s.gender === 'Male' ? 'Putra' : 'Putri'}`;
+        if (!resultsByCategory.has(cat)) resultsByCategory.set(cat, []);
+        resultsByCategory.get(cat)!.push(res);
     });
 
-    const bestSwimmersData: any[] = [
-        [event.name.toUpperCase()],
-        [`DAFTAR PEMAIN TERBAIK / BEST SWIMMERS`],
-        [],
-        ['Rank', 'Kategori', 'Nama Atlet', 'Sekolah/Club', 'Emas', 'Perak', 'Perunggu', 'Poin Rekor']
-    ];
+    resultsByCategory.forEach((catResults, categoryTitle) => {
+        const swimmerIds = Array.from(new Set(catResults.map(r => r.swimmerId)));
+        const bestSwimmers: BestSwimmerInfo[] = [];
 
-    Array.from(swimmersInCategory.entries()).forEach(([cat, list]) => {
-      list.sort((a, b) => {
-        if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
-        if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
-        if (b.bronzeMedalCount !== a.bronzeMedalCount) return b.bronzeMedalCount - a.bronzeMedalCount;
-        return (b.performanceScore || 0) - (a.performanceScore || 0);
-      });
-      list.forEach((s, idx) => {
-        bestSwimmersData.push([idx + 1, s.categoryTitle, s.swimmerName, s.swimmerSchoolName || '-', s.goldMedalCount, s.silverMedalCount, s.bronzeMedalCount, s.performanceScore?.toFixed(2) || '0.00']);
-      });
-      bestSwimmersData.push([]); 
+        swimmerIds.forEach(sid => {
+            const s = swimmers.find(sw => sw.id === sid);
+            if (!s) return;
+            const sResults = catResults.filter(r => r.swimmerId === sid);
+            
+            let gold = 0, silver = 0, bronze = 0, totalPerf = 0, perfCount = 0;
+            sResults.forEach(res => {
+                if (res.finalRank === 1) gold++;
+                else if (res.finalRank === 2) silver++;
+                else if (res.finalRank === 3) bronze++;
+
+                // Performance calculation
+                if (res.time && event.nationalRecords) {
+                    const ageGroup = getAgeGroup(s, event);
+                    const key = `${res.style}-${res.distance}-${s.gender}-${ageGroup}`;
+                    const rec = event.nationalRecords.find(nr => 
+                        nr.style === res.style && 
+                        nr.distance === res.distance && 
+                        nr.gender === s.gender && 
+                        nr.ageGroup === ageGroup
+                    );
+                    if (rec) {
+                        const resMs = timeToMilliseconds(res.time);
+                        const recMs = timeToMilliseconds(rec.time);
+                        if (resMs > 0 && recMs > 0) {
+                            totalPerf += (recMs / resMs) * 1000;
+                            perfCount++;
+                        }
+                    }
+                }
+            });
+
+            bestSwimmers.push({
+                swimmerId: sid,
+                swimmerName: s.name,
+                swimmerClubName: s.clubName,
+                swimmerSchoolName: s.schoolName,
+                categoryTitle: categoryTitle,
+                goldMedalCount: gold,
+                silverMedalCount: silver,
+                bronzeMedalCount: bronze,
+                performanceScore: perfCount > 0 ? totalPerf : 0
+            });
+        });
+
+        // Sort just like BestSwimmersPage
+        bestSwimmers.sort((a, b) => {
+            if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
+            if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
+            if (b.bronzeMedalCount !== a.bronzeMedalCount) return b.bronzeMedalCount - a.bronzeMedalCount;
+            return (b.performanceScore || 0) - (a.performanceScore || 0);
+        });
+
+        swimmersInCategory.set(categoryTitle, bestSwimmers);
     });
+
+    const bestSwimmersData = generateProfessionalBestSwimmersData(event, swimmersInCategory);
 
     // 4. Process Club Medals
-    const clubMap = new Map<string, { gold: number; silver: number; bronze: number }>();
+    const clubMap = new Map<string, { gold: number; silver: number; bronze: number; total: number }>();
     results.forEach(res => {
-      const swimmer = swimmers.find(s => s.id === res.swimmerId);
-      if (!swimmer || !swimmer.userId) return;
-      const clubId = swimmer.userId;
-      if (!clubMap.has(clubId)) clubMap.set(clubId, { gold: 0, silver: 0, bronze: 0 });
-      const counts = clubMap.get(clubId)!;
-      if (res.finalRank === 1) counts.gold++;
-      else if (res.finalRank === 2) counts.silver++;
-      else if (res.finalRank === 3) counts.bronze++;
+        if (!res.finalRank || res.finalRank > 3) return;
+        const swimmer = swimmers.find(s => s.id === res.swimmerId);
+        if (!swimmer || !swimmer.userId) return;
+        
+        const clubId = swimmer.userId;
+        if (!clubMap.has(clubId)) clubMap.set(clubId, { gold: 0, silver: 0, bronze: 0, total: 0 });
+        const counts = clubMap.get(clubId)!;
+        if (res.finalRank === 1) counts.gold++;
+        else if (res.finalRank === 2) counts.silver++;
+        else if (res.finalRank === 3) counts.bronze++;
+        counts.total++;
     });
 
-    const clubMedals: any[] = Array.from(clubMap.entries()).map(([id, counts]) => {
+    const clubMedalsSorted = Array.from(clubMap.entries()).map(([id, counts]) => {
       const user = users.find(u => u.id === id);
       return {
         clubName: user?.clubName || user?.username || 'Unknown',
         gold: counts.gold,
         silver: counts.silver,
         bronze: counts.bronze,
-        total: counts.gold + counts.silver + counts.bronze
+        total: counts.total
       };
     }).sort((a, b) => {
       if (b.gold !== a.gold) return b.gold - a.gold;
@@ -210,26 +235,50 @@ const OfficialReportPage: React.FC = () => {
       return b.total - a.total;
     });
 
-    const clubsReportData: any[] = [
-        [event.name.toUpperCase()],
-        [`PEROLEHAN MEDALI CLUB / SEKOLAH`],
-        [],
-        ['Rank', 'Nama Club/Sekolah', 'Emas', 'Perak', 'Perunggu', 'Total Medals']
-    ];
-    clubMedals.forEach((c, idx) => {
-        clubsReportData.push([idx + 1, c.clubName, c.gold, c.silver, c.bronze, c.total]);
-    });
+    const clubsReportData = generateProfessionalClubsData(event, clubMedalsSorted);
 
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Program
     const wsProgram = XLSX.utils.aoa_to_sheet(programData);
-    wsProgram['!cols'] = [{ wch: 8 }, { wch: 35 }, { wch: 10 }, { wch: 25 }, { wch: 25 }, { wch: 12 }];
+    const isO2SN = event.categorySystem === 'O2SN' || event.categorySystem === 'SCHOOL_LEVEL';
+    wsProgram['!cols'] = isO2SN ? [
+        { wch: 8 },  // Lintasan
+        { wch: 30 }, // Nama
+        { wch: 25 }, // Sekolah
+        { wch: 15 }, // Grade
+        { wch: 20 }, // Club
+        { wch: 12 }, // Prestasi
+        { wch: 12 }, // Final
+        { wch: 15 }, // Keterangan
+    ] : [
+        { wch: 8 },  // Lintasan
+        { wch: 30 }, // Nama
+        { wch: 25 }, // Club
+        { wch: 15 }, // Seed Time
+        { wch: 12 }, // Final
+        { wch: 15 }, // Keterangan
+    ];
     XLSX.utils.book_append_sheet(wb, wsProgram, "Buku Acara");
 
     // Sheet 2: Results
     const wsResults = XLSX.utils.aoa_to_sheet(resultsData);
-    wsResults['!cols'] = [{ wch: 8 }, { wch: 35 }, { wch: 6 }, { wch: 25 }, { wch: 25 }, { wch: 12 }, { wch: 10 }];
+    wsResults['!cols'] = isO2SN ? [
+        { wch: 6 },  // Rank
+        { wch: 30 }, // Nama
+        { wch: 25 }, // Sekolah
+        { wch: 25 }, // Club
+        { wch: 12 }, // Seed
+        { wch: 12 }, // Final
+        { wch: 15 }, // Status
+    ] : [
+        { wch: 6 },  // Rank
+        { wch: 30 }, // Nama
+        { wch: 25 }, // Club
+        { wch: 12 }, // Seed
+        { wch: 12 }, // Final
+        { wch: 15 }, // Status
+    ];
     XLSX.utils.book_append_sheet(wb, wsResults, "Buku Hasil");
 
     // Sheet 3: Best Swimmers
