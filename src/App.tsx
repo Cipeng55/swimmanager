@@ -10,6 +10,7 @@ import ResultsPage from './pages/ResultsPage';
 import ResultFormPage from './pages/ResultFormPage';
 import EventProgramPage from './pages/EventProgramPage';
 import EventResultsBookPage from './pages/EventResultsBookPage';
+import OfficialReportPage from './pages/OfficialReportPage';
 import ManageEventRecordsPage from './pages/ManageEventRecordsPage';
 import LoginPage from './pages/LoginPage'; 
 import LandingPage from './pages/LandingPage';
@@ -93,6 +94,7 @@ const App: React.FC = () => {
           <Route path="/events/add" element={<EventFormPage />} />
           <Route path="/events/edit/:eventId" element={<EventFormPage />} />
           <Route path="/events/:eventId/manage-records" element={<ManageEventRecordsPage />} />
+          <Route path="/events/:eventId/official-report" element={<OfficialReportPage />} />
         </Route>
 
         {/* Super Admin & Admin Routes */}

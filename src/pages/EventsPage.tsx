@@ -8,6 +8,7 @@ import { TrophyIcon } from '../components/icons/TrophyIcon';
 import { AwardIcon } from '../components/icons/AwardIcon';
 import { UsersIcon } from '../components/icons/UsersIcon';
 import { ClipboardCheckIcon } from '../components/icons/ClipboardCheckIcon';
+import { ClipboardListIcon } from '../components/icons/ClipboardListIcon';
 import { SwimEvent } from '../types';
 import { getEvents, deleteEvent as apiDeleteEvent } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -160,6 +161,14 @@ const EventsPage: React.FC = () => {
                       </button>
                       {canManageEvent(event) && (
                         <>
+                          <button
+                            onClick={() => navigate(`/events/${event.id}/official-report`)}
+                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            aria-label={`Official Report for ${event.name}`}
+                            title="Download Laporan Resmi (Excel)"
+                          >
+                            <ClipboardListIcon className="h-5 w-5" />
+                          </button>
                           <button
                             onClick={() => navigate(`/events/${event.id}/manage-records`)}
                             className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 p-1 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
