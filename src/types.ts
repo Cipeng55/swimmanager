@@ -41,6 +41,7 @@ export interface SwimEvent {
   categorySystem?: 'KU' | 'LETTER' | 'GRADE' | 'SCHOOL_LEVEL' | 'O2SN' | 'CUSTOM_GRADE';
   letterAgeRanges?: Partial<Record<LetterCategory, LetterAgeRange>>; // Custom DOB ranges for A-I
   customGradeGroups?: CustomGradeGroup[]; // Defined groups for CUSTOM_GRADE system
+  useNationalRecords?: boolean; // Whether to use the national record system for tie-breaking and best swimmer points
   nationalRecords?: NationalRecordDefinition[]; // Records for tie-breaking
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event

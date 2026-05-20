@@ -157,7 +157,7 @@ const OfficialReportPage: React.FC = () => {
                 else if (res.finalRank === 3) bronze++;
 
                 // Performance calculation
-                if (res.time && event.nationalRecords) {
+                if (event.useNationalRecords && res.time && event.nationalRecords) {
                     const ageGroup = getAgeGroup(s, event);
                     const key = `${res.style}-${res.distance}-${s.gender}-${ageGroup}`;
                     const rec = event.nationalRecords.find(nr => 

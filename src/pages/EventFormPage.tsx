@@ -43,6 +43,7 @@ const EventFormPage: React.FC = () => {
     lanesPerEvent: 8,
     courseType: 'SCM',
     categorySystem: 'KU',
+    useNationalRecords: false,
     letterAgeRanges: {},
     customGradeGroups: [],
     authorizedUserIds: [],
@@ -71,6 +72,7 @@ const EventFormPage: React.FC = () => {
                         lanesPerEvent: event.lanesPerEvent || 8,
                         courseType: event.courseType || 'SCM',
                         categorySystem: event.categorySystem || 'KU',
+                        useNationalRecords: event.useNationalRecords ?? false,
                         authorizedUserIds: event.authorizedUserIds || [],
                         customGradeGroups: event.customGradeGroups || [],
                     };
@@ -142,9 +144,12 @@ const EventFormPage: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    let val: string | number | undefined = value;
+    const { name, value, type } = e.target;
+    let val: string | number | boolean | undefined = value;
     if (name === 'lanesPerEvent') val = parseInt(value);
+    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+      val = e.target.checked;
+    }
     setEventData(prev => ({ ...prev, [name]: val }));
     if (formErrors[name as keyof NewSwimEvent]) setFormErrors(prev => ({...prev, [name]: undefined}));
   };
@@ -224,7 +229,7 @@ const EventFormPage: React.FC = () => {
     }
 
     try {
-      const payload: NewSwimEvent = {
+        const payload: NewSwimEvent = {
         name: eventData.name!,
         date: new Date(eventData.date!).toISOString().split('T')[0],
         location: eventData.location!,
@@ -232,6 +237,7 @@ const EventFormPage: React.FC = () => {
         lanesPerEvent: eventData.lanesPerEvent || 8,
         courseType: eventData.courseType || 'SCM',
         categorySystem: eventData.categorySystem || 'KU',
+        useNationalRecords: eventData.useNationalRecords,
         letterAgeRanges: processedLetterAgeRanges,
         customGradeGroups: eventData.categorySystem === 'CUSTOM_GRADE' ? customGradeGroups : undefined,
         authorizedUserIds: eventData.authorizedUserIds || [],
@@ -296,6 +302,26 @@ const EventFormPage: React.FC = () => {
             label="Course Type" id="courseType" name="courseType" type="select" options={courseTypeOptions}
             value={eventData.courseType || 'SCM'} onChange={handleChange} error={formErrors.courseType as string} required disabled={loading}
         />
+
+        <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg">
+          <input
+            type="checkbox"
+            id="useNationalRecords"
+            name="useNationalRecords"
+            checked={eventData.useNationalRecords || false}
+            onChange={handleChange}
+            className="h-5 w-5 text-primary border-gray-300 rounded focus:ring-primary"
+            disabled={loading}
+          />
+          <div className="flex-1">
+            <label htmlFor="useNationalRecords" className="block text-sm font-bold text-blue-900 dark:text-blue-100">
+              Gunakan Sistem Rekor Nasional (Performance Poin)
+            </label>
+            <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
+              Jika aktif, Anda harus menginput Rekor Nasional untuk menghitung Poin Record sebagai penentu Pemain Terbaik (Best Swimmer).
+            </p>
+          </div>
+        </div>
 
         {/* --- Club Authorization Section --- */}
         <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-3">

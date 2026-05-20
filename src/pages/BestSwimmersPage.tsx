@@ -121,16 +121,18 @@ const BestSwimmersPage: React.FC = () => {
 
       swimmerResults.forEach(res => {
         if (!res.time || timeToMilliseconds(res.time) <= 0) return;
-        const resTimeMs = timeToMilliseconds(res.time);
-        const ageGroup = getAgeGroup(swimmer, event);
-        const key = `${res.style}-${res.distance}-${swimmer.gender}-${ageGroup}`;
-        const recordMs = recordLookup.get(key);
         
-        if (recordMs) {
-          // Similarity to record calculation (higher is better)
-          // Using a simple ratio * 1000
-          totalPerformanceScore += (recordMs / resTimeMs) * 1000;
-          racesCounted++;
+        // Only calculate performance if system is enabled
+        if (event.useNationalRecords) {
+          const resTimeMs = timeToMilliseconds(res.time);
+          const ageGroup = getAgeGroup(swimmer, event);
+          const key = `${res.style}-${res.distance}-${swimmer.gender}-${ageGroup}`;
+          const recordMs = recordLookup.get(key);
+          
+          if (recordMs) {
+            totalPerformanceScore += (recordMs / resTimeMs) * 1000;
+            racesCounted++;
+          }
         }
       });
 
@@ -303,7 +305,7 @@ const BestSwimmersPage: React.FC = () => {
                       {swimmer.swimmerSchoolName && (
                           <p className="text-[10px] text-gray-500 dark:text-gray-500 italic truncate">{swimmer.swimmerSchoolName}</p>
                       )}
-                      {swimmer.performanceScore! > 0 && (
+                      {event?.useNationalRecords && swimmer.performanceScore! > 0 && (
                         <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-1">Poin Rekor: {swimmer.performanceScore?.toFixed(2)}</p>
                       )}
                     </div>
