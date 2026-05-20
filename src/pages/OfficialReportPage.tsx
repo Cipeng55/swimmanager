@@ -131,74 +131,78 @@ const OfficialReportPage: React.FC = () => {
     // 3. Process Best Swimmers
     const swimmersInCategory = new Map<string, BestSwimmerInfo[]>();
     
-    // Group results by category title (e.g. "KU 1 PUTRA")
-    const resultsByCategory = new Map<string, SwimResult[]>();
-    results.forEach(res => {
-        const s = swimmers.find(sw => sw.id === res.swimmerId);
-        if (!s) return;
-        const cat = `${getAgeGroup(s, event)} ${s.gender === 'Male' ? 'Putra' : 'Putri'}`;
-        if (!resultsByCategory.has(cat)) resultsByCategory.set(cat, []);
-        resultsByCategory.get(cat)!.push(res);
+    // Aggregate medals from the ranked results
+    const medalCounts = new Map<string, { gold: number; silver: number; bronze: number; perfScore: number; perfCount: number }>();
+
+    resultsByRace.forEach(race => {
+      race.results.forEach(res => {
+        if (!medalCounts.has(res.swimmerId)) {
+          medalCounts.set(res.swimmerId, { gold: 0, silver: 0, bronze: 0, perfScore: 0, perfCount: 0 });
+        }
+        const counts = medalCounts.get(res.swimmerId)!;
+        
+        // Count medals based on dynamic rank
+        if (res.rank === 1) counts.gold++;
+        else if (res.rank === 2) counts.silver++;
+        else if (res.rank === 3) counts.bronze++;
+
+        // Performance calculation (if enabled)
+        if (event.useNationalRecords && res.time && event.nationalRecords) {
+          const s = swimmers.find(sw => sw.id === res.swimmerId);
+          if (s) {
+            const ageGroup = getAgeGroup(s, event);
+            const rec = event.nationalRecords.find(nr => 
+              nr.style === res.style && 
+              nr.distance === res.distance && 
+              nr.gender === s.gender && 
+              nr.ageGroup === ageGroup
+            );
+            if (rec) {
+              const resMs = timeToMilliseconds(res.time);
+              const recMs = timeToMilliseconds(rec.time);
+              if (resMs > 0 && recMs > 0) {
+                counts.perfScore += (recMs / resMs) * 1000;
+                counts.perfCount++;
+              }
+            }
+          }
+        }
+      });
     });
 
-    resultsByCategory.forEach((catResults, categoryTitle) => {
-        const swimmerIds = Array.from(new Set(catResults.map(r => r.swimmerId)));
-        const bestSwimmers: BestSwimmerInfo[] = [];
-
-        swimmerIds.forEach(sid => {
-            const s = swimmers.find(sw => sw.id === sid);
-            if (!s) return;
-            const sResults = catResults.filter(r => r.swimmerId === sid);
-            
-            let gold = 0, silver = 0, bronze = 0, totalPerf = 0, perfCount = 0;
-            sResults.forEach(res => {
-                if (res.finalRank === 1) gold++;
-                else if (res.finalRank === 2) silver++;
-                else if (res.finalRank === 3) bronze++;
-
-                // Performance calculation
-                if (event.useNationalRecords && res.time && event.nationalRecords) {
-                    const ageGroup = getAgeGroup(s, event);
-                    const key = `${res.style}-${res.distance}-${s.gender}-${ageGroup}`;
-                    const rec = event.nationalRecords.find(nr => 
-                        nr.style === res.style && 
-                        nr.distance === res.distance && 
-                        nr.gender === s.gender && 
-                        nr.ageGroup === ageGroup
-                    );
-                    if (rec) {
-                        const resMs = timeToMilliseconds(res.time);
-                        const recMs = timeToMilliseconds(rec.time);
-                        if (resMs > 0 && recMs > 0) {
-                            totalPerf += (recMs / resMs) * 1000;
-                            perfCount++;
-                        }
-                    }
-                }
-            });
-
-            bestSwimmers.push({
-                swimmerId: sid,
-                swimmerName: s.name,
-                swimmerClubName: s.clubName,
-                swimmerSchoolName: s.schoolName,
-                categoryTitle: categoryTitle,
-                goldMedalCount: gold,
-                silverMedalCount: silver,
-                bronzeMedalCount: bronze,
-                performanceScore: perfCount > 0 ? totalPerf : 0
-            });
+    // Group by category and create BestSwimmerInfo objects
+    swimmers.forEach(s => {
+      const counts = medalCounts.get(s.id);
+      if (counts && (counts.gold > 0 || counts.silver > 0 || counts.bronze > 0)) {
+        const ageGroup = getAgeGroup(s, event);
+        const categoryTitle = `${ageGroup} ${s.gender === 'Male' ? 'Putra' : 'Putri'}`;
+        
+        if (!swimmersInCategory.has(categoryTitle)) {
+          swimmersInCategory.set(categoryTitle, []);
+        }
+        
+        swimmersInCategory.get(categoryTitle)!.push({
+          swimmerId: s.id,
+          swimmerName: s.name,
+          swimmerClubName: s.clubName,
+          swimmerSchoolName: s.schoolName,
+          categoryTitle: categoryTitle,
+          goldMedalCount: counts.gold,
+          silverMedalCount: counts.silver,
+          bronzeMedalCount: counts.bronze,
+          performanceScore: counts.perfCount > 0 ? counts.perfScore : 0
         });
+      }
+    });
 
-        // Sort just like BestSwimmersPage
-        bestSwimmers.sort((a, b) => {
-            if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
-            if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
-            if (b.bronzeMedalCount !== a.bronzeMedalCount) return b.bronzeMedalCount - a.bronzeMedalCount;
-            return (b.performanceScore || 0) - (a.performanceScore || 0);
-        });
-
-        swimmersInCategory.set(categoryTitle, bestSwimmers);
+    // Sort each category
+    swimmersInCategory.forEach((list) => {
+      list.sort((a, b) => {
+        if (b.goldMedalCount !== a.goldMedalCount) return b.goldMedalCount - a.goldMedalCount;
+        if (b.silverMedalCount !== a.silverMedalCount) return b.silverMedalCount - a.silverMedalCount;
+        if (b.bronzeMedalCount !== a.bronzeMedalCount) return b.bronzeMedalCount - a.bronzeMedalCount;
+        return (b.performanceScore || 0) - (a.performanceScore || 0);
+      });
     });
 
     const bestSwimmersData = generateProfessionalBestSwimmersData(event, swimmersInCategory);
