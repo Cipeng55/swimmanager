@@ -284,7 +284,7 @@ const EventsPage: React.FC = () => {
                         className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:hover:bg-blue-950/60 dark:text-blue-300 p-2.5 rounded-xl border border-blue-100/50 dark:border-blue-900/30 font-semibold text-xs transition duration-200"
                         title="Melihat jadwal tanding, line-up, dan nomor lintasan perenang."
                       >
-                        <ListOrderedIcon className="h-4.5 w-4.5 text-blue-500 flex-shrink-0" />
+                        <ListOrderedIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
                         <span className="truncate">Program & Heat</span>
                       </button>
 
@@ -293,7 +293,7 @@ const EventsPage: React.FC = () => {
                         className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/60 dark:text-emerald-300 p-2.5 rounded-xl border border-emerald-100/50 dark:border-emerald-900/30 font-semibold text-xs transition duration-200"
                         title="Melihat buku hasil pertandingan seluruh nomor."
                       >
-                        <TrophyIcon className="h-4.5 w-4.5 text-emerald-500 flex-shrink-0" />
+                        <TrophyIcon className="h-5 w-5 text-emerald-500 flex-shrink-0" />
                         <span className="truncate">Buku Hasil</span>
                       </button>
 
@@ -302,7 +302,7 @@ const EventsPage: React.FC = () => {
                         className="flex items-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-950/60 dark:text-amber-300 p-2.5 rounded-xl border border-amber-100/50 dark:border-amber-900/30 font-semibold text-xs transition duration-200"
                         title="Melihat rekapitulasi poin perenang terbaik (Best Swimmers)."
                       >
-                        <AwardIcon className="h-4.5 w-4.5 text-amber-500 flex-shrink-0" />
+                        <AwardIcon className="h-5 w-5 text-amber-500 flex-shrink-0" />
                         <span className="truncate">Perenang Terbaik</span>
                       </button>
 
@@ -311,7 +311,7 @@ const EventsPage: React.FC = () => {
                         className="flex items-center gap-2 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:hover:bg-purple-950/60 dark:text-purple-300 p-2.5 rounded-xl border border-purple-100/50 dark:border-purple-900/30 font-semibold text-xs transition duration-200"
                         title="Melihat peringkat dan skor poin antar perkumpulan/klub."
                       >
-                        <UsersIcon className="h-4.5 w-4.5 text-purple-500 flex-shrink-0" />
+                        <UsersIcon className="h-5 w-5 text-purple-500 flex-shrink-0" />
                         <span className="truncate">Klub Terbaik</span>
                       </button>
                     </div>
@@ -329,7 +329,7 @@ const EventsPage: React.FC = () => {
                           className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/60 dark:text-indigo-300 p-2.5 rounded-xl border border-indigo-100/50 dark:border-indigo-900/50 font-semibold text-xs transition duration-200"
                           title="Melakukan setup acuan catatan waktu rekor nasional."
                         >
-                          <ClipboardCheckIcon className="h-4.5 w-4.5 text-indigo-500 flex-shrink-0" />
+                          <ClipboardCheckIcon className="h-5 w-5 text-indigo-500 flex-shrink-0" />
                           <span className="truncate">Rekor Nasional</span>
                         </button>
 
@@ -338,7 +338,7 @@ const EventsPage: React.FC = () => {
                           className="flex items-center gap-2 bg-teal-50 hover:bg-teal-100 text-teal-700 dark:bg-teal-950/30 dark:hover:bg-teal-950/60 dark:text-teal-300 p-2.5 rounded-xl border border-teal-100/50 dark:border-teal-900/50 font-semibold text-xs transition duration-200"
                           title="Mengekspor laporan perlombaan resmi kedalam format Excel spreadsheet."
                         >
-                          <ClipboardListIcon className="h-4.5 w-4.5 text-teal-500 flex-shrink-0" />
+                          <ClipboardListIcon className="h-5 w-5 text-teal-500 flex-shrink-0" />
                           <span className="truncate">Laporan Resmi</span>
                         </button>
 
@@ -347,7 +347,7 @@ const EventsPage: React.FC = () => {
                           className="flex items-center gap-2 bg-gray-50 hover:bg-gray-150 text-gray-700 dark:bg-gray-900 dark:hover:bg-gray-750 dark:text-gray-300 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-xs transition duration-200"
                           title="Mengubah informasi umum kompetisi, tanggal, atau venue."
                         >
-                          <EditIcon className="h-4.5 w-4.5 text-gray-500 flex-shrink-0" />
+                          <EditIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />
                           <span className="truncate">Ubah Event</span>
                         </button>
 
@@ -356,7 +356,7 @@ const EventsPage: React.FC = () => {
                           className="flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/20 dark:hover:bg-red-950/40 dark:text-red-300 p-2.5 rounded-xl border border-red-100/50 dark:border-red-900/30 font-semibold text-xs transition duration-200"
                           title="Menghapus permanen event beserta seluruh data hasil tandingnya."
                         >
-                          <DeleteIcon className="h-4.5 w-4.5 text-red-500 flex-shrink-0" />
+                          <DeleteIcon className="h-5 w-5 text-red-500 flex-shrink-0" />
                           <span className="truncate text-red-600 dark:text-red-400">Hapus Event</span>
                         </button>
                       </div>
