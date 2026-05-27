@@ -4,40 +4,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { NewSwimResult, SwimResult, Swimmer, SwimEvent, SelectOption, RaceTypeSelection } from '../types';
 import { addResult, getResultById, updateResult, getSwimmers, getEvents, getResults } from '../services/api';
+import { predefinedRaceTypes } from '../constants';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckCircleIcon } from '../components/icons/CheckCircleIcon'; // For visual indicator
-
-// Define common race types
-const predefinedRaceTypes: RaceTypeSelection[] = [
-  { id: 'fs25', label: '25m Freestyle', style: 'Freestyle', distance: 25 },
-  { id: 'fs50', label: '50m Freestyle', style: 'Freestyle', distance: 50 },
-  { id: 'fs100', label: '100m Freestyle', style: 'Freestyle', distance: 100 },
-  { id: 'fs200', label: '200m Freestyle', style: 'Freestyle', distance: 200 },
-  { id: 'bf25', label: '25m Butterfly', style: 'Butterfly', distance: 25 },
-  { id: 'bf50', label: '50m Butterfly', style: 'Butterfly', distance: 50 },
-  { id: 'bf100', label: '100m Butterfly', style: 'Butterfly', distance: 100 },
-  { id: 'bk25', label: '25m Backstroke', style: 'Backstroke', distance: 25 },
-  { id: 'bk50', label: '50m Backstroke', style: 'Backstroke', distance: 50 },
-  { id: 'bk100', label: '100m Backstroke', style: 'Backstroke', distance: 100 },
-  { id: 'br25', label: '25m Breaststroke', style: 'Breaststroke', distance: 25 },
-  { id: 'br50', label: '50m Breaststroke', style: 'Breaststroke', distance: 50 },
-  { id: 'br100', label: '100m Breaststroke', style: 'Breaststroke', distance: 100 },
-  { id: 'im100', label: '100m Individual Medley', style: 'IM', distance: 100 },
-  { id: 'im200', label: '200m Individual Medley', style: 'IM', distance: 200 },
-  // New Kick Events
-  { id: 'kfs25', label: '25m Kick Freestyle', style: 'Kick Freestyle', distance: 25 },
-  { id: 'kbf25', label: '25m Kick Butterfly', style: 'Kick Butterfly', distance: 25 },
-  { id: 'kbr25', label: '25m Kick Breaststroke', style: 'Kick Breaststroke', distance: 25 },
-  { id: 'kfs50', label: '50m Kick Freestyle', style: 'Kick Freestyle', distance: 50 },
-  { id: 'kbf50', label: '50m Kick Butterfly', style: 'Kick Butterfly', distance: 50 },
-  { id: 'kbr50', label: '50m Kick Breaststroke', style: 'Kick Breaststroke', distance: 50 },
-  // New Relay Events
-  { id: 'fsr4x50', label: '4x50m Freestyle Relay', style: 'Freestyle Relay', distance: 200 },
-  { id: 'imr4x50', label: '4x50m Medley Relay', style: 'Medley Relay', distance: 200 },
-];
 
 // Enhanced state for race entries in Add mode
 interface RaceEntryState {
@@ -144,10 +116,14 @@ const ResultFormPage: React.FC = () => {
   }, [events, resultData.eventId]);
 
   const availableRaceTypes = useMemo(() => {
+    let list = predefinedRaceTypes;
     if (selectedEvent?.courseType === 'LCM') {
-        return predefinedRaceTypes.filter(race => race.distance !== 25);
+        list = list.filter(race => race.distance !== 25);
     }
-    return predefinedRaceTypes;
+    if (selectedEvent?.allowedRaces && selectedEvent.allowedRaces.length > 0) {
+        list = list.filter(race => selectedEvent.allowedRaces!.includes(race.id));
+    }
+    return list;
   }, [selectedEvent]);
 
   // Effect to initialize/update raceEntries for ADD mode based on selected swimmer/event
@@ -455,6 +431,11 @@ const ResultFormPage: React.FC = () => {
         {!isEditing && resultData.swimmerId && resultData.eventId && (
             <fieldset className="mt-4">
                 <legend className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Race(s) & Enter New Seed Times (MM:SS.ss)</legend>
+                {selectedEvent?.allowedRaces && selectedEvent.allowedRaces.length > 0 && (
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold mb-2 p-2 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 rounded-md">
+                        ℹ️ Hanya menampilkan {availableRaceTypes.length} nomor lomba yang diaktifkan oleh admin untuk "{selectedEvent.name}".
+                    </p>
+                )}
                 {formErrors.raceEntries && <p className="text-xs text-red-600 dark:text-red-400 mb-1">{formErrors.raceEntries}</p>}
                 <div className="space-y-3 p-3 border dark:border-gray-600 rounded-md max-h-96 overflow-y-auto">
                     {availableRaceTypes.map((raceType) => {

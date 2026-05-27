@@ -161,7 +161,10 @@ const OfficialReportPage: React.FC = () => {
               const resMs = timeToMilliseconds(res.time);
               const recMs = timeToMilliseconds(rec.time);
               if (resMs > 0 && recMs > 0) {
-                counts.perfScore += (recMs / resMs) * 1000;
+                const score = (recMs / resMs) * 1000;
+                if (score > counts.perfScore) {
+                  counts.perfScore = score;
+                }
                 counts.perfCount++;
               }
             }

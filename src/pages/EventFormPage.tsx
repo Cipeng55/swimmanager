@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { NewSwimEvent, SwimEvent, SelectOption, LetterCategory, LetterAgeRange, User, CustomGradeGroup } from '../types';
 import { addEvent, getEventById, updateEvent, getAllUsers } from '../services/api';
-import { gradeLevelOptions } from '../constants';
+import { gradeLevelOptions, predefinedRaceTypes } from '../constants';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import FormField from '../components/common/FormField';
 import { ButtonSpinnerIcon } from '../components/icons/ButtonSpinnerIcon';
@@ -44,6 +44,7 @@ const EventFormPage: React.FC = () => {
     courseType: 'SCM',
     categorySystem: 'KU',
     useNationalRecords: false,
+    allowedRaces: [],
     letterAgeRanges: {},
     customGradeGroups: [],
     authorizedUserIds: [],
@@ -73,6 +74,7 @@ const EventFormPage: React.FC = () => {
                         courseType: event.courseType || 'SCM',
                         categorySystem: event.categorySystem || 'KU',
                         useNationalRecords: event.useNationalRecords ?? false,
+                        allowedRaces: event.allowedRaces || [],
                         authorizedUserIds: event.authorizedUserIds || [],
                         customGradeGroups: event.customGradeGroups || [],
                     };
@@ -207,6 +209,30 @@ const EventFormPage: React.FC = () => {
     }));
   };
 
+  const handleToggleRaceSelection = (raceId: string) => {
+    setEventData(prev => {
+      const currentRaces = prev.allowedRaces || [];
+      const newRaces = currentRaces.includes(raceId)
+        ? currentRaces.filter(id => id !== raceId)
+        : [...currentRaces, raceId];
+      return { ...prev, allowedRaces: newRaces };
+    });
+  };
+
+  const handleSelectAllRaces = () => {
+    setEventData(prev => ({
+      ...prev,
+      allowedRaces: predefinedRaceTypes.map(r => r.id),
+    }));
+  };
+
+  const handleDeselectAllRaces = () => {
+    setEventData(prev => ({
+      ...prev,
+      allowedRaces: [],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -238,6 +264,7 @@ const EventFormPage: React.FC = () => {
         courseType: eventData.courseType || 'SCM',
         categorySystem: eventData.categorySystem || 'KU',
         useNationalRecords: eventData.useNationalRecords,
+        allowedRaces: eventData.allowedRaces || [],
         letterAgeRanges: processedLetterAgeRanges,
         customGradeGroups: eventData.categorySystem === 'CUSTOM_GRADE' ? customGradeGroups : undefined,
         authorizedUserIds: eventData.authorizedUserIds || [],
@@ -321,6 +348,70 @@ const EventFormPage: React.FC = () => {
               Jika aktif, Anda harus menginput Rekor Nasional untuk menghitung Poin Record sebagai penentu Pemain Terbaik (Best Swimmer).
             </p>
           </div>
+        </div>
+
+        {/* --- Allowed Races Selection Section --- */}
+        <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-md mt-4 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-200">Nomor Lomba yang Diaktifkan (Allowed Races)</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Centang nomor lomba yang dilombakan pada event ini. Pendaftar hanya bisa memilih dari nomor lomba yang aktif.
+                    </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <button
+                        type="button"
+                        onClick={handleSelectAllRaces}
+                        className="px-2 py-1 text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 rounded border border-indigo-200 transition-colors"
+                        disabled={loading}
+                    >
+                        Centang Semua
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleDeselectAllRaces}
+                        className="px-2 py-1 text-xs bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-750 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-700 transition-colors"
+                        disabled={loading}
+                    >
+                        Deselect Semua
+                    </button>
+                </div>
+            </div>
+
+            <p className="text-xs italic text-amber-600 dark:text-amber-400">
+              * Jika Anda tidak mencentang satupun, semua nomor lomba akan dianggap aktif secara default (kompatibilitas).
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-72 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded bg-gray-50/50 dark:bg-gray-900/10">
+              {/* Grouping races for neat display */}
+              {Array.from(new Set(predefinedRaceTypes.map(r => r.style))).map(style => {
+                const styleRaces = predefinedRaceTypes.filter(r => r.style === style);
+                return (
+                  <div key={style} className="space-y-2">
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider border-b dark:border-gray-700 pb-1">
+                      {style}
+                    </h4>
+                    <div className="space-y-1">
+                      {styleRaces.map(race => (
+                        <label key={race.id} className="flex items-start text-sm hover:bg-white dark:hover:bg-gray-800 p-1 rounded cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={(eventData.allowedRaces || []).includes(race.id)}
+                            onChange={() => handleToggleRaceSelection(race.id)}
+                            className="focus:ring-primary h-4 w-4 text-primary border-gray-300 dark:border-gray-500 dark:bg-gray-600 dark:checked:bg-primary rounded mt-0.5"
+                            disabled={loading}
+                          />
+                          <span className="ml-2 text-xs text-gray-700 dark:text-gray-300">
+                            {race.label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
         </div>
 
         {/* --- Club Authorization Section --- */}

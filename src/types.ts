@@ -43,6 +43,7 @@ export interface SwimEvent {
   customGradeGroups?: CustomGradeGroup[]; // Defined groups for CUSTOM_GRADE system
   useNationalRecords?: boolean; // Whether to use the national record system for tie-breaking and best swimmer points
   nationalRecords?: NationalRecordDefinition[]; // Records for tie-breaking
+  allowedRaces?: string[]; // IDs of the allowed race types for this event
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event
 }

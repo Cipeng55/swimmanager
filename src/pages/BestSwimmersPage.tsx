@@ -116,7 +116,7 @@ const BestSwimmersPage: React.FC = () => {
 
     swimmersWithMedals.forEach(swimmer => {
       const swimmerResults = eventResults.filter(r => r.swimmerId === swimmer.id);
-      let totalPerformanceScore = 0;
+      let maxPerformanceScore = 0;
       let racesCounted = 0;
 
       swimmerResults.forEach(res => {
@@ -130,7 +130,10 @@ const BestSwimmersPage: React.FC = () => {
           const recordMs = recordLookup.get(key);
           
           if (recordMs) {
-            totalPerformanceScore += (recordMs / resTimeMs) * 1000;
+            const score = (recordMs / resTimeMs) * 1000;
+            if (score > maxPerformanceScore) {
+              maxPerformanceScore = score;
+            }
             racesCounted++;
           }
         }
@@ -151,7 +154,7 @@ const BestSwimmersPage: React.FC = () => {
         goldMedalCount: medals.gold,
         silverMedalCount: medals.silver,
         bronzeMedalCount: medals.bronze,
-        performanceScore: racesCounted > 0 ? totalPerformanceScore : 0
+        performanceScore: racesCounted > 0 ? maxPerformanceScore : 0
       });
     });
 
