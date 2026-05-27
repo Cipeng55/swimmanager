@@ -115,6 +115,20 @@ const ResultFormPage: React.FC = () => {
     return events.find(e => e.id === resultData.eventId);
   }, [events, resultData.eventId]);
 
+  const isRegistrationClosed = useMemo(() => {
+    if (!selectedEvent) return false;
+    if (selectedEvent.registrationClosed) return true;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const eventDateStr = selectedEvent.date.split('T')[0];
+    return eventDateStr < todayStr;
+  }, [selectedEvent]);
+
+  const isRegistrationBlockedForRole = useMemo(() => {
+    if (!isRegistrationClosed) return false;
+    return currentUser?.role === 'user';
+  }, [isRegistrationClosed, currentUser]);
+
   const availableRaceTypes = useMemo(() => {
     let list = predefinedRaceTypes;
     if (selectedEvent?.courseType === 'LCM') {
@@ -177,7 +191,16 @@ const ResultFormPage: React.FC = () => {
   }, [allSwimmers, currentUser]);
 
   const eventOptions: SelectOption[] = useMemo(() => 
-    events.map(e => ({ value: e.id, label: `${e.name} (${new Date(e.date).toLocaleDateString('id-ID')})` })), 
+    events.map(e => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const eventDateStr = e.date.split('T')[0];
+      const isClosed = e.registrationClosed || (eventDateStr < todayStr);
+      const suffix = isClosed ? " [PENDAFTARAN TUTUP]" : "";
+      return { 
+        value: e.id, 
+        label: `${e.name} (${new Date(e.date).toLocaleDateString('id-ID')})${suffix}` 
+      };
+    }), 
   [events]);
 
   const validateTimeFormat = (timeValue: string | undefined): boolean => {
@@ -251,6 +274,10 @@ const ResultFormPage: React.FC = () => {
     setSubmissionStatus(null);
     if (isUnauthorizedEdit) {
         setError("Submission denied: You are not authorized to edit this result.");
+        return;
+    }
+    if (isRegistrationBlockedForRole) {
+        setError("Pendaftaran sudah ditutup atau berakhir untuk kompetisi ini.");
         return;
     }
     if (!validateForm()) return;
@@ -383,6 +410,20 @@ const ResultFormPage: React.FC = () => {
         </p>
       </header>
 
+      {isRegistrationBlockedForRole && (
+        <div className="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/60 flex items-start gap-3 shadow-sm">
+          <svg className="h-6 w-6 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0-8V11m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h4 className="font-bold text-sm text-red-800 dark:text-red-300">Pendaftaran &amp; Perubahan Ditutup</h4>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-1 leading-relaxed">
+              Masa pendaftaran peserta / input catatan waktu untuk kompetisi <strong>"{selectedEvent?.name}"</strong> telah berakhir atau ditutup secara resmi oleh panitia. Akun klub tidak dapat mendaftarkan atau mengedit perenang pada kompetisi ini.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && <div className="mb-4 p-3 text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-700 rounded-md">{error}</div>}
       {submissionStatus && (
         <div className={`mb-4 p-3 rounded-md ${submissionStatus.failures > 0 ? 'bg-red-100 dark:bg-red-700 text-red-700 dark:text-red-200' : 'bg-green-100 dark:bg-green-700 text-green-700 dark:text-green-200'}`}>
@@ -455,7 +496,7 @@ const ResultFormPage: React.FC = () => {
                                 type="checkbox"
                                 checked={entry.selectedForSubmission}
                                 onChange={(e) => handleRaceEntryChange(raceType.id, 'selectedForSubmission', e.target.checked)}
-                                disabled={loading || isUnauthorizedEdit}
+                                disabled={loading || isUnauthorizedEdit || isRegistrationBlockedForRole}
                                 className="focus:ring-primary h-4 w-4 text-primary border-gray-300 dark:border-gray-500 dark:bg-gray-600 dark:checked:bg-primary rounded"
                                 />
                             )}
@@ -475,7 +516,7 @@ const ResultFormPage: React.FC = () => {
                                 placeholder="00:25.10"
                                 value={entry.inputValue}
                                 onChange={(e) => handleRaceEntryChange(raceType.id, 'inputValue', e.target.value)}
-                                disabled={loading || isUnauthorizedEdit || !entry.selectedForSubmission}
+                                disabled={loading || isUnauthorizedEdit || !entry.selectedForSubmission || isRegistrationBlockedForRole}
                                 maxLength={8}
                                 className={`w-28 sm:w-32 px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary focus:border-primary ${!entry.selectedForSubmission ? 'bg-gray-100 dark:bg-gray-600 opacity-50' : 'bg-white dark:bg-gray-700'}`}
                                 />
@@ -506,7 +547,7 @@ const ResultFormPage: React.FC = () => {
                     value={raceType.id}
                     checked={resultData.selectedRaceTypeId === raceType.id}
                     onChange={handleEditRaceTypeChange}
-                    disabled={loading || isUnauthorizedEdit}
+                    disabled={loading || isUnauthorizedEdit || isRegistrationBlockedForRole}
                     className="focus:ring-primary h-4 w-4 text-primary border-gray-300 dark:border-gray-500 dark:bg-gray-600 dark:checked:bg-primary"
                     />
                     <label htmlFor={`race-edit-${raceType.id}`} className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
@@ -528,7 +569,7 @@ const ResultFormPage: React.FC = () => {
             value={resultData.seedTime || ''}
             onChange={handleCommonChange} 
             error={formErrors.seedTime}
-            disabled={loading || isUnauthorizedEdit}
+            disabled={loading || isUnauthorizedEdit || isRegistrationBlockedForRole}
             maxLength={8}
             />
         )}
@@ -541,7 +582,7 @@ const ResultFormPage: React.FC = () => {
           placeholder="e.g., Personal Best (Applies to all selected races if adding multiple)"
           value={resultData.remarks || ''}
           onChange={handleCommonChange}
-          disabled={loading || isUnauthorizedEdit}
+          disabled={loading || isUnauthorizedEdit || isRegistrationBlockedForRole}
         />
 
         {currentUser?.role === 'admin' && (
@@ -554,7 +595,7 @@ const ResultFormPage: React.FC = () => {
             onChange={handleCommonChange}
             error={formErrors.dateRecorded}
             required
-            disabled={loading || isUnauthorizedEdit}
+            disabled={loading || isUnauthorizedEdit || isRegistrationBlockedForRole}
             />
         )}
         
@@ -567,7 +608,7 @@ const ResultFormPage: React.FC = () => {
           </Link>
           <button
             type="submit"
-            disabled={loading || (currentUser?.role === 'user' && swimmerOptions.length === 0) || events.length === 0 || isUnauthorizedEdit || (!isEditing && (!resultData.swimmerId || !resultData.eventId))}
+            disabled={loading || (currentUser?.role === 'user' && swimmerOptions.length === 0) || events.length === 0 || isUnauthorizedEdit || isRegistrationBlockedForRole || (!isEditing && (!resultData.swimmerId || !resultData.eventId))}
             className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary dark:focus:ring-offset-gray-800 disabled:opacity-50 flex items-center"
           >
             {loading && <ButtonSpinnerIcon className="h-4 w-4 mr-2" />}

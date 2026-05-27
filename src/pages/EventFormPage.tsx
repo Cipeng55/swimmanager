@@ -44,6 +44,7 @@ const EventFormPage: React.FC = () => {
     courseType: 'SCM',
     categorySystem: 'KU',
     useNationalRecords: false,
+    registrationClosed: false,
     allowedRaces: [],
     letterAgeRanges: {},
     customGradeGroups: [],
@@ -74,6 +75,7 @@ const EventFormPage: React.FC = () => {
                         courseType: event.courseType || 'SCM',
                         categorySystem: event.categorySystem || 'KU',
                         useNationalRecords: event.useNationalRecords ?? false,
+                        registrationClosed: event.registrationClosed ?? false,
                         allowedRaces: event.allowedRaces || [],
                         authorizedUserIds: event.authorizedUserIds || [],
                         customGradeGroups: event.customGradeGroups || [],
@@ -264,6 +266,7 @@ const EventFormPage: React.FC = () => {
         courseType: eventData.courseType || 'SCM',
         categorySystem: eventData.categorySystem || 'KU',
         useNationalRecords: eventData.useNationalRecords,
+        registrationClosed: eventData.registrationClosed || false,
         allowedRaces: eventData.allowedRaces || [],
         letterAgeRanges: processedLetterAgeRanges,
         customGradeGroups: eventData.categorySystem === 'CUSTOM_GRADE' ? customGradeGroups : undefined,
@@ -346,6 +349,26 @@ const EventFormPage: React.FC = () => {
             </label>
             <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
               Jika aktif, Anda harus menginput Rekor Nasional untuk menghitung Poin Record sebagai penentu Pemain Terbaik (Best Swimmer).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 p-4 bg-red-50 dark:bg-red-950/20 border border-red-150 dark:border-red-900/60 rounded-lg">
+          <input
+            type="checkbox"
+            id="registrationClosed"
+            name="registrationClosed"
+            checked={eventData.registrationClosed || false}
+            onChange={handleChange}
+            className="h-5 w-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+            disabled={loading}
+          />
+          <div className="flex-1">
+            <label htmlFor="registrationClosed" className="block text-sm font-bold text-red-900 dark:text-red-100">
+              Tutup Pendaftaran Peserta (Manual)
+            </label>
+            <p className="text-xs text-red-800 dark:text-red-200 mt-1">
+              Centang jika Anda ingin menutup proses registrasi pendaftar/klub secara manual untuk kompetisi ini, bahkan jika tanggal pelaksanaan belum lewat.
             </p>
           </div>
         </div>

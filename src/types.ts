@@ -46,6 +46,7 @@ export interface SwimEvent {
   allowedRaces?: string[]; // IDs of the allowed race types for this event
   createdByAdminId: string; // ID of the admin who created the event
   authorizedUserIds: string[]; // List of user IDs (role: 'user') authorized for this event
+  registrationClosed?: boolean; // True if pendaftaran is closed manually by admin
 }
 export type NewSwimEvent = Omit<SwimEvent, 'id' | 'createdByAdminId'>;
 
