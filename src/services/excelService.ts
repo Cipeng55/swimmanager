@@ -280,3 +280,121 @@ export const generateProfessionalClubsData = (event: SwimEvent, clubMedals: any[
 
     return data;
 };
+
+export const generateProfessionalRegistrationStatsData = (
+  event: SwimEvent,
+  results: SwimResult[],
+  swimmers: Swimmer[]
+) => {
+  const data: any[] = [
+    [event.name.toUpperCase()],
+    ['LAPORAN REKAPITULASI PENDAFTAR ATLET PER CLUB/SEKOLAH'],
+    [`Tanggal: ${event.date ? new Date(event.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}`],
+    [],
+  ];
+
+  // Get swimmers registered in this event
+  const eventResults = results.filter(r => r.eventId === event.id);
+  const registeredSwimmerIds = Array.from(new Set(eventResults.map(r => r.swimmerId)));
+  const registeredSwimmers = registeredSwimmerIds
+    .map(id => swimmers.find(s => s.id === id))
+    .filter((s): s is Swimmer => s !== undefined);
+
+  // Group by club
+  const clubMap: Record<string, { male: Swimmer[]; female: Swimmer[] }> = {};
+  registeredSwimmers.forEach(s => {
+    const club = s.clubName || 'Tanpa Club/Sekolah';
+    if (!clubMap[club]) {
+      clubMap[club] = { male: [], female: [] };
+    }
+    if (s.gender === 'Male') {
+      clubMap[club].male.push(s);
+    } else {
+      clubMap[club].female.push(s);
+    }
+  });
+
+  // 1. REKAPITULASI TABEL RINGKASAN
+  data.push(['I. TABEL SUMMARY (REKAPITULASI JUMLAH)']);
+  data.push(['No', 'Nama Perkumpulan / Klub / Sekolah', 'Putra (Pa)', 'Putri (Pi)', 'Total Atlet']);
+
+  const sortedClubs = Object.entries(clubMap)
+    .map(([clubName, lists]) => ({
+      clubName,
+      maleCount: lists.male.length,
+      femaleCount: lists.female.length,
+      totalCount: lists.male.length + lists.female.length,
+      lists,
+    }))
+    .sort((a, b) => b.totalCount - a.totalCount || a.clubName.localeCompare(b.clubName));
+
+  sortedClubs.forEach((club, idx) => {
+    data.push([
+      idx + 1,
+      club.clubName.toUpperCase(),
+      club.maleCount,
+      club.femaleCount,
+      club.totalCount,
+    ]);
+  });
+
+  // Total Row for Summary Table
+  const grandTotalMale = sortedClubs.reduce((acc, c) => acc + c.maleCount, 0);
+  const grandTotalFemale = sortedClubs.reduce((acc, c) => acc + c.femaleCount, 0);
+  const grandTotal = grandTotalMale + grandTotalFemale;
+  data.push([
+    'TOTAL',
+    'KESELURUHAN ATLET',
+    grandTotalMale,
+    grandTotalFemale,
+    grandTotal,
+  ]);
+
+  data.push([]);
+  data.push([]);
+
+  // 2. RINCIAN NAMA ATLET PER CLUB
+  data.push(['II. DAFTAR NAMA ATLET (DIBEDAKAN PA & PI)']);
+  data.push([]);
+
+  sortedClubs.forEach((club) => {
+    data.push([`CLUB: ${club.clubName.toUpperCase()} (Total: ${club.totalCount} Atlet - ${club.maleCount} Pa, ${club.femaleCount} Pi)`]);
+    
+    // List Putra (Pa)
+    data.push(['', 'DAFTAR ATLET PUTRA (Pa)']);
+    if (club.lists.male.length === 0) {
+      data.push(['', 'Tidak ada atlet putra.']);
+    } else {
+      data.push(['', 'No', 'Nama Atlet', 'Kategori KU/Instansi', 'Tanggal Lahir']);
+      club.lists.male
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach((s, idx) => {
+          const dobStr = s.dob ? new Date(s.dob).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+          const ageGroup = getAgeGroup(s, event);
+          data.push(['', idx + 1, s.name.toUpperCase(), ageGroup, dobStr]);
+        });
+    }
+
+    data.push([]); // Gap
+
+    // List Putri (Pi)
+    data.push(['', 'DAFTAR ATLET PUTRI (Pi)']);
+    if (club.lists.female.length === 0) {
+      data.push(['', 'Tidak ada atlet putri.']);
+    } else {
+      data.push(['', 'No', 'Nama Atlet', 'Kategori KU/Instansi', 'Tanggal Lahir']);
+      club.lists.female
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach((s, idx) => {
+          const dobStr = s.dob ? new Date(s.dob).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-';
+          const ageGroup = getAgeGroup(s, event);
+          data.push(['', idx + 1, s.name.toUpperCase(), ageGroup, dobStr]);
+        });
+    }
+
+    data.push([]); // Double gap between clubs
+    data.push([]);
+  });
+
+  return data;
+};

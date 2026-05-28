@@ -11,7 +11,8 @@ import {
     generateProfessionalProgramData, 
     generateProfessionalResultsData,
     generateProfessionalBestSwimmersData,
-    generateProfessionalClubsData
+    generateProfessionalClubsData,
+    generateProfessionalRegistrationStatsData
 } from '../services/excelService';
 import * as XLSX from 'xlsx';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -297,6 +298,18 @@ const OfficialReportPage: React.FC = () => {
     const wsClubs = XLSX.utils.aoa_to_sheet(clubsReportData);
     wsClubs['!cols'] = [{ wch: 6 }, { wch: 40 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, wsClubs, "Club Terbaik");
+
+    // Sheet 5: Registration Stats (Rekap Pendaftar)
+    const statsSheetData = generateProfessionalRegistrationStatsData(event, results, swimmers);
+    const wsStats = XLSX.utils.aoa_to_sheet(statsSheetData);
+    wsStats['!cols'] = [
+        { wch: 6 },  // No
+        { wch: 40 }, // Detail / Nama Klub / Nama Atlet
+        { wch: 25 }, // Gender / Kategori / KU
+        { wch: 20 }, // DOB
+        { wch: 15 }, // Total
+    ];
+    XLSX.utils.book_append_sheet(wb, wsStats, "Rekap Pendaftar");
     
     XLSX.writeFile(wb, `${event.name.replace(/\s+/g, '_')}_Official_Report.xlsx`);
   };
@@ -320,6 +333,7 @@ const OfficialReportPage: React.FC = () => {
               <li>Sheet 2: Buku Hasil (Urutan juara per gaya)</li>
               <li>Sheet 3: Pemain Terbaik (Peringkat atlet per kategori)</li>
               <li>Sheet 4: Club Terbaik (Tabel medali club)</li>
+              <li>Sheet 5: Rekap Pendaftar (Tabel summary jumlah & rincian nama atlet Pa/Pi per klub)</li>
               <li>Layout dioptimalkan untuk cetak kertas F4</li>
               <li>Tersedia area kosong di bagian atas untuk penempelan Logo Event</li>
             </ul>
