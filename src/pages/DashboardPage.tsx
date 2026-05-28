@@ -163,38 +163,10 @@ const DashboardPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3 sm:mt-0">
-                      <Link
-                        to={`/events/${event.id}/program`}
-                        className="flex items-center space-x-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
-                        title="Open Program & Heat Sheets"
-                      >
-                        <ListOrderedIcon className="h-5 w-5" />
-                        <span>Program</span>
-                      </Link>
-                      <Link
-                        to={`/events/${event.id}/results-book`}
-                        className="flex items-center space-x-2 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
-                        title="Open Results Book"
-                      >
-                        <TrophyIcon className="h-5 w-5" />
-                        <span>Results</span>
-                      </Link>
-                      <Link
-                        to={`/events/${event.id}/best-swimmers`}
-                        className="flex items-center space-x-2 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
-                        title="Open Best Swimmers"
-                      >
-                        <AwardIcon className="h-5 w-5" />
-                        <span>Pemain Terbaik</span>
-                      </Link>
-                       <Link
-                        to={`/events/${event.id}/best-clubs`}
-                        className="flex items-center space-x-2 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800/70 font-semibold py-2 px-3 rounded-lg shadow-sm transition-all duration-200"
-                        title="Open Best Clubs"
-                      >
-                        <UsersIcon className="h-5 w-5" />
-                        <span>Klub Terbaik</span>
-                      </Link>
+                      {/* Restricted menus (Program, Results, Pemain Terbaik, Klub Terbaik) are hidden for user roles */}
+                      <span className="text-xs text-gray-400 dark:text-gray-550 border border-gray-200 dark:border-gray-700 px-3 py-1.5 rounded-lg select-none">
+                        Terdaftar
+                      </span>
                     </div>
                   </div>
                 ))}

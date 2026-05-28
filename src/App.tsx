@@ -65,19 +65,11 @@ const App: React.FC = () => {
       <Route element={<MainAppLayout />}>
 
         {/* Print Routes - they use the layout component, which handles their special case */}
-        <Route path="/events/:eventId/program/print" element={<PrintableEventProgram />} />
-        <Route path="/events/:eventId/results-book/print" element={<PrintableResultsBook />} />
         <Route path="/events/:eventId/club-starting-list/print" element={<PrintableClubStartingList />} />
-        <Route path="/events/:eventId/best-swimmers/print" element={<PrintableBestSwimmers />} />
-        <Route path="/events/:eventId/best-clubs/print" element={<PrintableBestClubs />} />
 
         {/* Protected Routes - Accessible by all roles */}
         <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin', 'user']} />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
-          <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
-          <Route path="/events/:eventId/best-swimmers" element={<BestSwimmersPage />} />
-          <Route path="/events/:eventId/best-clubs" element={<BestClubsPage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/club-starting-list" element={<ClubStartingListPage />} />
           {/* Swimmer and Result Management */}
@@ -86,6 +78,18 @@ const App: React.FC = () => {
           <Route path="/swimmers/edit/:swimmerId" element={<SwimmerFormPage />} />
           <Route path="/results/add" element={<ResultFormPage />} />
           <Route path="/results/edit/:resultId" element={<ResultFormPage />} />
+        </Route>
+
+        {/* Admin and Superadmin Only Routes for Reports & Event Management */}
+        <Route element={<PrivateRoute allowedRoles={['superadmin', 'admin']} />}>
+          <Route path="/events/:eventId/program" element={<EventProgramPage />} /> 
+          <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
+          <Route path="/events/:eventId/best-swimmers" element={<BestSwimmersPage />} />
+          <Route path="/events/:eventId/best-clubs" element={<BestClubsPage />} />
+          <Route path="/events/:eventId/program/print" element={<PrintableEventProgram />} />
+          <Route path="/events/:eventId/results-book/print" element={<PrintableResultsBook />} />
+          <Route path="/events/:eventId/best-swimmers/print" element={<PrintableBestSwimmers />} />
+          <Route path="/events/:eventId/best-clubs/print" element={<PrintableBestClubs />} />
         </Route>
 
         {/* Admin (Event Organizer) Only Routes */}
