@@ -9,20 +9,30 @@ import { AwardIcon } from '../components/icons/AwardIcon';
 import { UsersIcon } from '../components/icons/UsersIcon';
 import { ClipboardCheckIcon } from '../components/icons/ClipboardCheckIcon';
 import { ClipboardListIcon } from '../components/icons/ClipboardListIcon';
-import { SwimEvent } from '../types';
-import { getEvents, deleteEvent as apiDeleteEvent } from '../services/api';
+import { SwimEvent, Swimmer, SwimResult } from '../types';
+import { getEvents, deleteEvent as apiDeleteEvent, getSwimmers, getResults } from '../services/api';
+import { getAgeGroup, calculateAge } from '../utils/ageUtils';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Modal from '../components/common/Modal';
 import { useAuth } from '../contexts/AuthContext';
 
 const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<SwimEvent[]>([]);
+  const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
+  const [results, setResults] = useState<SwimResult[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [locationFilter, setLocationFilter] = useState<string>('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [eventToDelete, setEventToDelete] = useState<SwimEvent | null>(null);
+
+  // States for stats tracking modal
+  const [selectedStatsEvent, setSelectedStatsEvent] = useState<SwimEvent | null>(null);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
+  const [searchTermClub, setSearchTermClub] = useState<string>('');
+  const [expandedClubs, setExpandedClubs] = useState<Record<string, boolean>>({});
+
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
@@ -30,8 +40,14 @@ const EventsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getEvents();
-      setEvents(data);
+      const [eventsData, swimmersData, resultsData] = await Promise.all([
+        getEvents(),
+        getSwimmers(),
+        getResults()
+      ]);
+      setEvents(eventsData);
+      setSwimmers(swimmersData);
+      setResults(resultsData);
     } catch (err) {
       setError('Gagal memuat kompetisi. Silakan coba lagi.');
       console.error(err);
@@ -134,6 +150,80 @@ const EventsPage: React.FC = () => {
   });
 
   const uniqueLocations = Array.from(new Set(events.map(e => e.location))).filter(Boolean);
+
+  const handleOpenStatsModal = (event: SwimEvent) => {
+    setSelectedStatsEvent(event);
+    setSearchTermClub('');
+    
+    // Automatically pre-expand the user's club if they are role === 'user'
+    const initialExpanded: Record<string, boolean> = {};
+    if (currentUser?.role === 'user' && currentUser.clubName) {
+      initialExpanded[currentUser.clubName] = true;
+    }
+    setExpandedClubs(initialExpanded);
+    setIsStatsModalOpen(true);
+  };
+
+  const toggleClubExpanded = (clubName: string) => {
+    setExpandedClubs(prev => ({
+      ...prev,
+      [clubName]: !prev[clubName]
+    }));
+  };
+
+  const getEventStatsCached = (event: SwimEvent) => {
+    const eventResults = results.filter(r => r.eventId === event.id);
+    const registeredSwimmerIds = Array.from(new Set(eventResults.map(r => r.swimmerId)));
+    const registeredSwimmers = registeredSwimmerIds
+      .map(id => swimmers.find(s => s.id === id))
+      .filter((s): s is Swimmer => s !== undefined);
+
+    const totalCount = registeredSwimmers.length;
+    const maleCount = registeredSwimmers.filter(s => s.gender === 'Male').length;
+    const femaleCount = registeredSwimmers.filter(s => s.gender === 'Female').length;
+
+    const clubBreakdownMap: Record<string, { male: number; female: number; swimmersList: Swimmer[] }> = {};
+
+    registeredSwimmers.forEach(swimmer => {
+      const club = swimmer.clubName || 'Klub Tidak Diketahui';
+      if (!clubBreakdownMap[club]) {
+        clubBreakdownMap[club] = { male: 0, female: 0, swimmersList: [] };
+      }
+      if (swimmer.gender === 'Male') {
+        clubBreakdownMap[club].male += 1;
+      } else {
+        clubBreakdownMap[club].female += 1;
+      }
+      clubBreakdownMap[club].swimmersList.push(swimmer);
+    });
+
+    const clubBreakdown = Object.entries(clubBreakdownMap).map(([clubName, stats]) => {
+      // Sort swimmersList by gender then name
+      const sortedSwimmers = [...stats.swimmersList].sort((a, b) => {
+        if (a.gender !== b.gender) {
+          return a.gender === 'Male' ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      return {
+        clubName,
+        male: stats.male,
+        female: stats.female,
+        total: stats.male + stats.female,
+        swimmersList: sortedSwimmers
+      };
+    }).sort((a, b) => b.total - a.total || a.clubName.localeCompare(b.clubName));
+
+    return {
+      totalCount,
+      maleCount,
+      femaleCount,
+      clubBreakdown
+    };
+  };
+
+  const statsData = selectedStatsEvent ? getEventStatsCached(selectedStatsEvent) : null;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -315,6 +405,15 @@ const EventsPage: React.FC = () => {
                         <span className="truncate">Klub Terbaik</span>
                       </button>
                     </div>
+
+                    <button
+                      onClick={() => handleOpenStatsModal(event)}
+                      className="mt-3 w-full flex items-center justify-center gap-2 bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-955/20 dark:hover:bg-pink-950/40 dark:text-pink-300 p-2.5 rounded-xl border border-pink-100/50 dark:border-pink-900/30 font-semibold text-xs transition duration-200 shadow-sm"
+                      title="Melihat statistik jumlah pendaftar perenang Putra/Putri dari setiap klub pada event ini."
+                    >
+                      <UsersIcon className="h-4.5 w-4.5 text-pink-500 flex-shrink-0" />
+                      <span>Statistik Pendaftar (Putra/Putri per Klub)</span>
+                    </button>
                   </div>
 
                   {/* Admin Only Segment */}
@@ -403,6 +502,206 @@ const EventsPage: React.FC = () => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Statistik Pendaftar */}
+      <Modal 
+        isOpen={isStatsModalOpen} 
+        onClose={() => setIsStatsModalOpen(false)} 
+        title="Statistik & Rekapitulasi Pendaftar"
+        maxWidthClass="max-w-3xl"
+      >
+        {selectedStatsEvent && statsData ? (
+          <div className="space-y-6">
+            <div className="border-b border-gray-100 dark:border-gray-700 pb-3">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{selectedStatsEvent.name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {new Date(selectedStatsEvent.date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })} &bull; {selectedStatsEvent.location}
+              </p>
+            </div>
+
+            {/* Quick Cards of Totals */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-xl p-4 text-center">
+                <span className="block text-xs font-bold text-indigo-550 dark:text-indigo-400 uppercase tracking-wider mb-1">Total Atlet</span>
+                <span className="text-3xl font-extrabold text-indigo-700 dark:text-indigo-300">{statsData.totalCount}</span>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-xl p-4 text-center">
+                <span className="block text-xs font-bold text-blue-550 dark:text-blue-400 uppercase tracking-wider mb-1">Putra (L)</span>
+                <span className="text-3xl font-extrabold text-blue-700 dark:text-blue-300">{statsData.maleCount}</span>
+              </div>
+              <div className="bg-pink-50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900 rounded-xl p-4 text-center">
+                <span className="block text-xs font-bold text-pink-550 dark:text-pink-400 uppercase tracking-wider mb-1">Putri (P)</span>
+                <span className="text-3xl font-extrabold text-pink-700 dark:text-pink-300">{statsData.femaleCount}</span>
+              </div>
+            </div>
+
+            {/* Club Breakdown Table section */}
+            <div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h4 className="font-bold text-gray-850 dark:text-gray-200">Rincian per Perkumpulan / Klub</h4>
+                
+                {/* Search input in modal */}
+                <div className="relative w-full sm:w-64">
+                  <input
+                    type="text"
+                    placeholder="Cari klub..."
+                    value={searchTermClub}
+                    onChange={(e) => setSearchTermClub(e.target.value)}
+                    className="w-full text-xs px-3 py-2 border border-gray-200 dark:border-gray-750 bg-gray-50 dark:bg-gray-900 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {statsData.clubBreakdown.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                  <p>Belum ada atlet/perenang terdaftar untuk event ini.</p>
+                </div>
+              ) : (
+                <div className="overflow-visible max-h-[350px] overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-xl">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-bold text-gray-500 uppercase text-[11px] tracking-wider select-none">
+                        <th className="p-3">Nama Klub</th>
+                        <th className="p-3 text-center">Putra (L)</th>
+                        <th className="p-3 text-center">Putri (P)</th>
+                        <th className="p-3 text-center">Total</th>
+                        <th className="p-3 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {statsData.clubBreakdown
+                        .filter(c => c.clubName.toLowerCase().includes(searchTermClub.toLowerCase()))
+                        .map(c => {
+                          const isMyClub = currentUser?.role === 'user' && c.clubName === currentUser?.clubName;
+                          const isExpanded = !!expandedClubs[c.clubName];
+                          
+                          return (
+                            <React.Fragment key={c.clubName}>
+                              <tr 
+                                className={`transition-colors ${
+                                  isMyClub 
+                                    ? 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/10 dark:hover:bg-amber-950/20 divide-amber-200 dark:divide-purple-900/40' 
+                                    : 'hover:bg-gray-50 dark:hover:bg-gray-750'
+                                }`}
+                              >
+                                <td className="p-3 font-semibold text-gray-850 dark:text-gray-100 flex items-center gap-2">
+                                  {isMyClub && (
+                                    <span className="bg-amber-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">
+                                      Klub Saya
+                                    </span>
+                                  )}
+                                  {c.clubName}
+                                </td>
+                                <td className="p-3 text-center text-blue-600 dark:text-blue-400 font-medium">{c.male}</td>
+                                <td className="p-3 text-center text-pink-600 dark:text-pink-400 font-medium">{c.female}</td>
+                                <td className="p-3 text-center font-bold text-gray-900 dark:text-white">{c.total}</td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={() => toggleClubExpanded(c.clubName)}
+                                    className="inline-flex items-center text-xs font-bold text-primary hover:text-primary-dark cursor-pointer select-none"
+                                  >
+                                    <span>{isExpanded ? 'Sembunyikan' : 'Lihat Nama'}</span>
+                                    <svg 
+                                      className={`h-4 w-4 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                                      fill="none" 
+                                      viewBox="0 0 24 24" 
+                                      stroke="currentColor"
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                  </button>
+                                </td>
+                              </tr>
+                              
+                              {/* Expandable row for the list of swimmer names */}
+                              {isExpanded && (
+                                <tr className="bg-gray-50/50 dark:bg-gray-900/30">
+                                  <td colSpan={5} className="p-4 border-t border-b border-gray-150 dark:border-gray-750">
+                                    <div className="space-y-3 pl-2">
+                                      <h5 className="text-xs font-extrabold text-gray-400 uppercase tracking-widest">
+                                        Daftar Perenang Terdaftar — {c.clubName}
+                                      </h5>
+                                      
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* Putra Swimmers */}
+                                        <div>
+                                          <div className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-1.5 flex items-center gap-1">
+                                            <span>PUTRA ({c.swimmersList.filter(s => s.gender === 'Male').length})</span>
+                                          </div>
+                                          {c.swimmersList.filter(s => s.gender === 'Male').length === 0 ? (
+                                            <p className="text-xs text-gray-400 italic">Tidak ada perenang putra.</p>
+                                          ) : (
+                                            <ul className="space-y-1 list-disc list-inside text-xs text-gray-755 dark:text-gray-300">
+                                              {c.swimmersList.filter(s => s.gender === 'Male').map(s => {
+                                                const age = calculateAge(s.dob, selectedStatsEvent.date);
+                                                const ageGroup = getAgeGroup(s, selectedStatsEvent);
+                                                return (
+                                                  <li key={s.id} className="truncate">
+                                                    <span className="font-medium text-gray-800 dark:text-gray-100">{s.name}</span>{' '}
+                                                    <span className="text-gray-500 dark:text-gray-400">
+                                                      ({age >= 0 ? `${age} thn` : 'TL/Grade'} &bull; {ageGroup})
+                                                    </span>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          )}
+                                        </div>
+
+                                        {/* Putri Swimmers */}
+                                        <div>
+                                          <div className="text-xs font-bold text-pink-600 dark:text-pink-400 mb-1.5 flex items-center gap-1">
+                                            <span>PUTRI ({c.swimmersList.filter(s => s.gender === 'Female').length})</span>
+                                          </div>
+                                          {c.swimmersList.filter(s => s.gender === 'Female').length === 0 ? (
+                                            <p className="text-xs text-gray-400 italic">Tidak ada perenang putri.</p>
+                                          ) : (
+                                            <ul className="space-y-1 list-disc list-inside text-xs text-gray-755 dark:text-gray-300">
+                                              {c.swimmersList.filter(s => s.gender === 'Female').map(s => {
+                                                const age = calculateAge(s.dob, selectedStatsEvent.date);
+                                                const ageGroup = getAgeGroup(s, selectedStatsEvent);
+                                                return (
+                                                  <li key={s.id} className="truncate">
+                                                    <span className="font-medium text-gray-800 dark:text-gray-100">{s.name}</span>{' '}
+                                                    <span className="text-gray-500 dark:text-gray-400">
+                                                      ({age >= 0 ? `${age} thn` : 'TL/Grade'} &bull; {ageGroup})
+                                                    </span>
+                                                  </li>
+                                                );
+                                              })}
+                                            </ul>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setIsStatsModalOpen(false)}
+                className="px-5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-150 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition focus:outline-none"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center">
+            <LoadingSpinner text="Memuat data statistik..." />
+          </div>
+        )}
       </Modal>
     </div>
   );

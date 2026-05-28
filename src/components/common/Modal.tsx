@@ -5,9 +5,10 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  maxWidthClass?: string;
 }
 
-const Modal: React.FC<PropsWithChildren<ModalProps>> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<PropsWithChildren<ModalProps>> = ({ isOpen, onClose, title, maxWidthClass = 'max-w-md', children }) => {
   if (!isOpen) return null;
 
   return (
@@ -19,7 +20,7 @@ const Modal: React.FC<PropsWithChildren<ModalProps>> = ({ isOpen, onClose, title
       onClick={onClose} // Close on overlay click
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow"
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full ${maxWidthClass} mx-4 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-modalShow`}
         onClick={(e) => e.stopPropagation()} // Prevent close when clicking inside modal content
         style={{ animationName: 'modalShowAnim', animationDuration: '0.3s', animationFillMode: 'forwards' }}
       >
