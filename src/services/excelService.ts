@@ -139,7 +139,7 @@ export const generateProfessionalProgramData = (event: SwimEvent, racesWithHeats
             if (isO2SN) {
                 data.push(['Lintasan', 'Nama', 'Nama Sekolah', 'Grade', 'Club / Instansi', 'Prestasi', 'Waktu Final', 'Keterangan']);
             } else {
-                data.push(['Lintasan', 'Nama', 'Club', 'Seed Time', 'Waktu Final', 'Keterangan']);
+                data.push(['Lintasan', 'Nama', 'Nama Sekolah', 'Club', 'Seed Time', 'Waktu Final', 'Keterangan']);
             }
             
             heat.lanes.forEach((lane) => {
@@ -159,6 +159,7 @@ export const generateProfessionalProgramData = (event: SwimEvent, racesWithHeats
                         data.push([
                             lane.lane,
                             lane.swimmer.name.toUpperCase(),
+                            lane.swimmer.schoolName || '-',
                             lane.swimmer.clubName || '-',
                             lane.swimmer.seedTimeStr || 'NT',
                             lane.swimmer.finalTimeStr || '-',
@@ -170,7 +171,7 @@ export const generateProfessionalProgramData = (event: SwimEvent, racesWithHeats
                     if (isO2SN) {
                         data.push([lane.lane, '', '', '', '', '', '', '']);
                     } else {
-                        data.push([lane.lane, '', '', '', '', '']);
+                        data.push([lane.lane, '', '', '', '', '', '']);
                     }
                 }
             });
@@ -200,7 +201,7 @@ export const generateProfessionalResultsData = (event: SwimEvent, resultsByRace:
         if (isO2SN) {
             data.push(['Rank', 'Nama Atlet', 'Nama Sekolah', 'Club', 'Seed Time', 'Waktu Akhir', 'Status']);
         } else {
-            data.push(['Rank', 'Nama Atlet', 'Club', 'Seed Time', 'Waktu Akhir', 'Status']);
+            data.push(['Rank', 'Nama Atlet', 'Nama Sekolah', 'Club', 'Seed Time', 'Waktu Akhir', 'Status']);
         }
         
         results.forEach((res: any) => {
@@ -218,6 +219,7 @@ export const generateProfessionalResultsData = (event: SwimEvent, resultsByRace:
                 data.push([
                     res.rank || (res.remarks || '-'),
                     res.swimmerName.toUpperCase(),
+                    res.swimmerSchoolName || '-',
                     res.swimmerClubName || '-',
                     res.seedTimeStr || 'NT',
                     res.time || 'NT',

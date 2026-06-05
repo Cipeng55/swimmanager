@@ -262,6 +262,7 @@ const OfficialReportPage: React.FC = () => {
     ] : [
         { wch: 8 },  // Lintasan
         { wch: 30 }, // Nama
+        { wch: 25 }, // Sekolah
         { wch: 25 }, // Club
         { wch: 15 }, // Seed Time
         { wch: 12 }, // Final
@@ -282,6 +283,7 @@ const OfficialReportPage: React.FC = () => {
     ] : [
         { wch: 6 },  // Rank
         { wch: 30 }, // Nama
+        { wch: 25 }, // Sekolah
         { wch: 25 }, // Club
         { wch: 12 }, // Seed
         { wch: 12 }, // Final
