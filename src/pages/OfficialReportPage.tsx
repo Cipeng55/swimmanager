@@ -8,7 +8,8 @@ import { timeToMilliseconds } from '../utils/timeUtils';
 import { processResultsForRankings } from '../utils/resultUtils';
 import { 
     exportEventToExcel, 
-    generateProfessionalProgramData, 
+    generateProfessionalProgramData,
+    generateHorizontalProgramData,
     generateProfessionalResultsData,
     generateProfessionalBestSwimmersData,
     generateProfessionalClubsData,
@@ -120,6 +121,7 @@ const OfficialReportPage: React.FC = () => {
     })).filter(rh => rh.heats.length > 0);
 
     const programData = generateProfessionalProgramData(event, racesWithHeats);
+    const horizontalProgramData = generateHorizontalProgramData(event, racesWithHeats);
 
     // 2. Process Results Data per Race
     const resultsByRace = processResultsForRankings(event, results, swimmers).map((pr, idx) => ({
@@ -269,6 +271,18 @@ const OfficialReportPage: React.FC = () => {
         { wch: 15 }, // Keterangan
     ];
     XLSX.utils.book_append_sheet(wb, wsProgram, "Buku Acara");
+
+    // Sheet 1.5: Buku Acara (Horizontal)
+    const wsHorizontalProgram = XLSX.utils.aoa_to_sheet(horizontalProgramData);
+    const horizontalCols = [
+        { wch: 6 },  // No
+        { wch: 15 }, // Ket Seri
+    ];
+    for (let i = 0; i < (event.lanesPerEvent || 4); i++) {
+        horizontalCols.push({ wch: 25 }); // Lintasan N (just names)
+    }
+    wsHorizontalProgram['!cols'] = horizontalCols;
+    XLSX.utils.book_append_sheet(wb, wsHorizontalProgram, "Buku Acara (Horisontal)");
 
     // Sheet 2: Results
     const wsResults = XLSX.utils.aoa_to_sheet(resultsData);

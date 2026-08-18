@@ -115,6 +115,56 @@ export const exportEventToExcel = (
   XLSX.writeFile(wb, `${event.name.replace(/\s+/g, '_')}_Official_Book.xlsx`);
 };
 
+export const generateHorizontalProgramData = (event: SwimEvent, racesWithHeats: { race: RaceDefinition; heats: Heat[] }[]) => {
+    const data: any[] = [
+        [event.name.toUpperCase()],
+        [`JADWAL PERTANDINGAN (FORMAT HORISONTAL)`],
+        [`${event.date ? new Date(event.date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''} - ${event.location || ''}`],
+        [`Lintasan: ${event.lanesPerEvent || 4}`],
+        [],
+    ];
+
+    const numLanes = event.lanesPerEvent || 4;
+
+    racesWithHeats.forEach((group) => {
+        const { race, heats } = group;
+        const raceHeader = `ACARA ${race.acaraNumber} - ${race.distance}M ${race.style.toUpperCase()} - ${race.ageGroup.toUpperCase()} ${race.gender === 'Male' ? 'PUTRA' : race.gender === 'Female' ? 'PUTRI' : 'MIXED'}`;
+        
+        data.push([raceHeader]);
+        
+        // Build the header row for the horizontal table
+        const headerRow = ['No', 'Ket Seri'];
+        for (let i = 1; i <= numLanes; i++) {
+            headerRow.push(`Lintasan ${i}`);
+        }
+        data.push(headerRow);
+
+        // Build a row for each heat
+        heats.forEach((heat, index) => {
+            const rowData: any[] = [index + 1, `Seri ${heat.heatNumber}`];
+            
+            // Map lanes to their array index (1-based to 0-based)
+            const laneMap = new Map<number, string>();
+            heat.lanes.forEach(lane => {
+                if (lane.swimmer) {
+                    laneMap.set(lane.lane, lane.swimmer.name.toUpperCase());
+                }
+            });
+
+            // Fill in the lane data horizontally
+            for (let i = 1; i <= numLanes; i++) {
+                rowData.push(laneMap.get(i) || ''); // Empty string if no swimmer in that lane
+            }
+            
+            data.push(rowData);
+        });
+
+        data.push([]); // Gap between Acara
+    });
+
+    return data;
+};
+
 // Helper for professional Program export matching PDF/Image layout
 export const generateProfessionalProgramData = (event: SwimEvent, racesWithHeats: { race: RaceDefinition; heats: Heat[] }[]) => {
     const data: any[] = [
