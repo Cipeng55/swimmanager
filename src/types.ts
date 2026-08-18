@@ -284,4 +284,17 @@ export interface BestClubsPrintData {
     event: SwimEvent;
     bestClubs: BestClubInfo[];
 }
-// --- End Best Clubs Types ---
+// --- Club Participation Types ---
+export interface ClubParticipationInfo {
+  clubName: string;
+  totalSwimmers: number;
+  individualEntries: number;
+  relayEntries: number;
+  totalEntries: number;
+}
+
+export interface ClubParticipationPrintData {
+  event: SwimEvent;
+  participationList: ClubParticipationInfo[];
+}
+// --- End Club Participation Types ---

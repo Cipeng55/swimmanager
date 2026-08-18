@@ -25,6 +25,8 @@ import BestSwimmersPage from './pages/BestSwimmersPage';
 import PrintableBestSwimmers from './components/printable/PrintableBestSwimmers';
 import BestClubsPage from './pages/BestClubsPage';
 import PrintableBestClubs from './components/printable/PrintableBestClubs';
+import ClubParticipationPage from './pages/ClubParticipationPage';
+import PrintableClubParticipation from './components/printable/PrintableClubParticipation';
 
 // Layout component for pages that share the main Navbar and Footer
 const MainAppLayout: React.FC = () => {
@@ -86,10 +88,12 @@ const App: React.FC = () => {
           <Route path="/events/:eventId/results-book" element={<EventResultsBookPage />} /> 
           <Route path="/events/:eventId/best-swimmers" element={<BestSwimmersPage />} />
           <Route path="/events/:eventId/best-clubs" element={<BestClubsPage />} />
+          <Route path="/events/:eventId/club-participation" element={<ClubParticipationPage />} />
           <Route path="/events/:eventId/program/print" element={<PrintableEventProgram />} />
           <Route path="/events/:eventId/results-book/print" element={<PrintableResultsBook />} />
           <Route path="/events/:eventId/best-swimmers/print" element={<PrintableBestSwimmers />} />
           <Route path="/events/:eventId/best-clubs/print" element={<PrintableBestClubs />} />
+          <Route path="/events/:eventId/club-participation/print" element={<PrintableClubParticipation />} />
         </Route>
 
         {/* Admin (Event Organizer) Only Routes */}

@@ -406,14 +406,25 @@ const EventsPage: React.FC = () => {
                       </button>
                     </div>
 
-                    <button
-                      onClick={() => handleOpenStatsModal(event)}
-                      className="mt-3 w-full flex items-center justify-center gap-2 bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-955/20 dark:hover:bg-pink-950/40 dark:text-pink-300 p-2.5 rounded-xl border border-pink-100/50 dark:border-pink-900/30 font-semibold text-xs transition duration-200 shadow-sm"
-                      title="Melihat statistik jumlah pendaftar perenang Putra/Putri dari setiap klub pada event ini."
-                    >
-                      <UsersIcon className="h-4.5 w-4.5 text-pink-500 flex-shrink-0" />
-                      <span>Statistik Pendaftar (Putra/Putri per Klub)</span>
-                    </button>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleOpenStatsModal(event)}
+                        className="w-full flex items-center justify-center gap-2 bg-pink-50 hover:bg-pink-100 text-pink-700 dark:bg-pink-955/20 dark:hover:bg-pink-950/40 dark:text-pink-300 p-2.5 rounded-xl border border-pink-100/50 dark:border-pink-900/30 font-semibold text-xs transition duration-200 shadow-sm"
+                        title="Melihat statistik jumlah pendaftar perenang Putra/Putri dari setiap klub pada event ini."
+                      >
+                        <UsersIcon className="h-4.5 w-4.5 text-pink-500 flex-shrink-0" />
+                        <span className="truncate">Statistik Pendaftar</span>
+                      </button>
+
+                      <button
+                        onClick={() => navigate(`/events/${event.id}/club-participation`)}
+                        className="w-full flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/60 dark:text-indigo-300 p-2.5 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30 font-semibold text-xs transition duration-200 shadow-sm"
+                        title="Melihat rekap partisipasi atlet, nomor perorangan, dan nomor estafet per klub."
+                      >
+                        <ClipboardListIcon className="h-4.5 w-4.5 text-indigo-500 flex-shrink-0" />
+                        <span className="truncate">Rekap Partisipasi</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Admin Only Segment */}
