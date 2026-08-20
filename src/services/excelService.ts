@@ -255,25 +255,26 @@ export const generateProfessionalResultsData = (event: SwimEvent, resultsByRace:
         }
         
         results.forEach((res: any) => {
+            const finalTime = (res.time && res.time !== '99:99.99') ? res.time : (res.remarks ? '' : 'NT');
             if (isO2SN) {
                 data.push([
-                    res.rank || (res.remarks || '-'),
+                    res.rank !== undefined ? res.rank : (res.remarks || '-'),
                     res.swimmerName.toUpperCase(),
                     res.swimmerSchoolName || '-',
                     res.swimmerClubName || '-',
                     res.seedTimeStr || 'NT',
-                    res.time || 'NT',
-                    res.remarks || 'OK'
+                    finalTime,
+                    res.remarks || '-'
                 ]);
             } else {
                 data.push([
-                    res.rank || (res.remarks || '-'),
+                    res.rank !== undefined ? res.rank : (res.remarks || '-'),
                     res.swimmerName.toUpperCase(),
                     res.swimmerSchoolName || '-',
                     res.swimmerClubName || '-',
                     res.seedTimeStr || 'NT',
-                    res.time || 'NT',
-                    res.remarks || 'OK'
+                    finalTime,
+                    res.remarks || '-'
                 ]);
             }
         });
