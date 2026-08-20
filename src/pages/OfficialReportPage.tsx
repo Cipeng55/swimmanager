@@ -124,10 +124,21 @@ const OfficialReportPage: React.FC = () => {
     const horizontalProgramData = generateHorizontalProgramData(event, racesWithHeats);
 
     // 2. Process Results Data per Race
-    const resultsByRace = processResultsForRankings(event, results, swimmers).map((pr, idx) => ({
-      ...pr,
-      definition: { ...pr.definition, acaraNumber: idx + 1 }
-    }));
+    const unorderedResults = processResultsForRankings(event, results, swimmers);
+    const resultsMap = new Map();
+    unorderedResults.forEach(pr => {
+        const key = `${pr.definition.style}-${pr.definition.distance}-${pr.definition.gender}-${pr.definition.ageGroup}`;
+        resultsMap.set(key, pr);
+    });
+
+    const resultsByRace = sortedRaces.map((r, idx) => {
+        const key = `${r.definition.style}-${r.definition.distance}-${r.definition.gender}-${r.definition.ageGroup}`;
+        const pr = resultsMap.get(key) || { definition: r.definition, results: [] };
+        return {
+            ...pr,
+            definition: { ...pr.definition, acaraNumber: idx + 1 }
+        };
+    }).filter(r => r.results && r.results.length > 0);
 
     const resultsData = generateProfessionalResultsData(event, resultsByRace);
 

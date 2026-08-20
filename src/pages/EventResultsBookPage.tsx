@@ -70,7 +70,8 @@ const EventResultsBookPage: React.FC = () => {
 
     const finalRaces: RaceResults[] = [];
     groupedByRace.forEach((raceEntries, raceKey) => {
-      const [style, distanceStr, gender, ageGroup] = raceKey.split('-');
+      const [style, distanceStr, gender, ...ageGroupParts] = raceKey.split('-');
+      const ageGroup = ageGroupParts.join('-');
       
       // 1. Separate entries into timed and non-timed groups.
       const timedEntries: ResultEntry[] = [];
